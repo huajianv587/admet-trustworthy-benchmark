@@ -107,6 +107,8 @@ REQUIRED_PUBLIC_CODE_PATHS = (
     "experiments/analyze_crossfit_oracle_sensitivity.py",
     "experiments/analyze_crossfit_influence_sensitivity.py",
     "experiments/analyze_reviewer_defense_sensitivities.py",
+    "experiments/analyze_selected_support_risk_coverage.py",
+    "experiments/analyze_validation_selected_sensitivity.py",
     "experiments/make_reliability_regret_figure.py",
     "experiments/make_trustworthiness_main_figures.py",
     "experiments/make_manuscript_tables.py",
@@ -156,9 +158,11 @@ REQUIRED_PUBLIC_TEST_PATHS = (
     "tests/test_reliability_regret_figure.py",
     "tests/test_reproducibility_release.py",
     "tests/test_reviewer_defense_sensitivities.py",
+    "tests/test_selected_support_risk_coverage.py",
     "tests/test_traditional_prediction_rebuild.py",
     "tests/test_trustworthiness_analysis.py",
     "tests/test_trustworthiness_main_figures.py",
+    "tests/test_validation_selected_sensitivity.py",
 )
 REQUIRED_PUBLIC_SOFTWARE_PATHS = (
     *REQUIRED_PUBLIC_CODE_PATHS,
@@ -424,6 +428,123 @@ FINAL_REVIEWER_DEFENSE_EXPECTED_ROWS = {
     "reviewer_lomo_selections": 110,
     "reviewer_conditional_rows": 330,
     "reviewer_conditional_summary": 36,
+}
+
+FINAL_SELECTED_SUPPORT_OUTPUTS = {
+    "selected_support_ensemble_alignment": (
+        "ensemble_sample_alignment_audit.csv",
+        "selected_support_alignment_audit",
+    ),
+    "selected_support_model_seed_availability": (
+        "model_seed_availability.csv",
+        "selected_support_input_audit",
+    ),
+    "selected_support_prediction_input_audit": (
+        "prediction_input_audit.csv",
+        "selected_support_input_audit",
+    ),
+    "selected_support_run_alignment": (
+        "run_sample_alignment_audit.csv",
+        "selected_support_alignment_audit",
+    ),
+    "selected_support_by_endpoint": (
+        "selected_support_risk_coverage_by_endpoint.csv",
+        "selected_support_endpoint_result",
+    ),
+    "selected_support_curve": (
+        "selected_support_risk_coverage_curve.csv",
+        "selected_support_curve_result",
+    ),
+    "selected_support_gate": (
+        "selected_support_risk_coverage_gate.json",
+        "selected_support_gate",
+    ),
+    "selected_support_summary": (
+        "selected_support_risk_coverage_summary.csv",
+        "selected_support_summary",
+    ),
+    "selected_support_table": (
+        "table_selected_support_risk_coverage.tex",
+        "selected_support_supplementary_table",
+    ),
+    "selected_support_validation_scores": (
+        "validation_seed_scores_recomputed.csv",
+        "selected_support_input_audit",
+    ),
+}
+FINAL_SELECTED_SUPPORT_EXPECTED_ROWS = {
+    "selected_support_ensemble_alignment": 110,
+    "selected_support_model_seed_availability": 110,
+    "selected_support_prediction_input_audit": 550,
+    "selected_support_run_alignment": 550,
+    "selected_support_by_endpoint": 22,
+    "selected_support_curve": 32758,
+    "selected_support_summary": 9,
+    "selected_support_validation_scores": 550,
+}
+FINAL_SELECTED_SUPPORT_NONPORTABLE = {
+    "selected_support_prediction_input_audit": (
+        "selected_support_prediction_input_audit.csv"
+    ),
+    "selected_support_validation_scores": (
+        "selected_support_validation_seed_scores_recomputed.csv"
+    ),
+}
+
+FINAL_VALIDATION_SELECTED_OUTPUTS = {
+    "validation_selected_interpretation": (
+        "VALIDATION_SELECTED_SENSITIVITY.md",
+        "validation_selected_interpretation",
+    ),
+    "validation_selected_calibration_endpoints": (
+        "selected_calibration_by_endpoint_method.csv",
+        "validation_selected_endpoint_result",
+    ),
+    "validation_selected_calibration_summary": (
+        "selected_calibration_gain_summary.csv",
+        "validation_selected_summary",
+    ),
+    "validation_selected_conditional_endpoints": (
+        "selected_conditional_reliability_by_endpoint.csv",
+        "validation_selected_endpoint_result",
+    ),
+    "validation_selected_conditional_summary": (
+        "selected_conditional_reliability_summary.csv",
+        "validation_selected_summary",
+    ),
+    "validation_selected_conformal_summary": (
+        "selected_conformal_summary.csv",
+        "validation_selected_summary",
+    ),
+    "validation_selected_table": (
+        "table_supp_validation_selected_sensitivity.tex",
+        "validation_selected_supplementary_table",
+    ),
+    "validation_selected_manifest": (
+        "validation_selected_sensitivity_manifest.json",
+        "validation_selected_manifest",
+    ),
+}
+FINAL_VALIDATION_SELECTED_EXPECTED_ROWS = {
+    "validation_selected_calibration_endpoints": 35,
+    "validation_selected_calibration_summary": 4,
+    "validation_selected_conditional_endpoints": 66,
+    "validation_selected_conditional_summary": 18,
+    "validation_selected_conformal_summary": 1,
+}
+FINAL_VALIDATION_SELECTED_INPUTS = {
+    "validation_selected_input_selection": (
+        "results/tables/reliability_regret_final/validation_selection_by_task.csv",
+        "validation_selected_input",
+    ),
+    "validation_selected_input_conditional": (
+        "results/tables/conditional_reliability_final/conditional_reliability_by_task_model.csv",
+        "validation_selected_input",
+    ),
+    "validation_selected_input_calibration": (
+        "results/tables/calibration_summary_final.csv",
+        "validation_selected_input",
+    ),
 }
 
 FINAL_PUBLIC_RESULT_OUTPUTS = {
@@ -5646,6 +5767,305 @@ def _audit_reviewer_defense_release_evidence(
     }
 
 
+def _audit_selected_support_release_evidence(
+    *,
+    root: Path,
+    catalog: SupplementSnapshotCatalog,
+    fixed_files: Mapping[str, tuple[Path, str]],
+    snapshots: Mapping[str, FileSnapshot],
+    failures: list[str],
+) -> tuple[dict[str, Any], list[tuple[str, bytes]]]:
+    """Bind the zero-refit selected-support result family into the release."""
+
+    failure_start = len(failures)
+    observed_rows: dict[str, int] = {}
+    public_payloads: list[tuple[str, bytes]] = []
+
+    def _number(value: Any, label: str) -> float:
+        try:
+            result = float(value)
+        except (TypeError, ValueError) as exc:
+            raise ValueError(f"{label} is not numeric") from exc
+        if not math.isfinite(result):
+            raise ValueError(f"{label} is not finite")
+        return result
+
+    def _close(left: float, right: float) -> bool:
+        return math.isclose(left, right, rel_tol=1e-9, abs_tol=1e-12)
+
+    for logical_name, expected_rows in FINAL_SELECTED_SUPPORT_EXPECTED_ROWS.items():
+        snapshot = snapshots.get(logical_name)
+        if snapshot is None:
+            continue
+        try:
+            _, rows = _csv_rows(snapshot, logical_name)
+            observed_rows[logical_name] = len(rows)
+            if len(rows) != expected_rows:
+                raise ValueError(
+                    f"{logical_name} has {len(rows)} rows, expected {expected_rows}"
+                )
+        except ValueError as exc:
+            failures.append(str(exc))
+
+    for logical_name, public_name in FINAL_SELECTED_SUPPORT_NONPORTABLE.items():
+        snapshot = snapshots.get(logical_name)
+        if snapshot is None:
+            continue
+        catalog.require(
+            snapshot.path,
+            fixed_files[logical_name][1],
+            failures,
+            package_action="exclude_nonportable",
+        )
+        try:
+            public_payloads.append(
+                (
+                    public_name,
+                    _sanitize_public_metadata_payload(
+                        public_name, snapshot.data, root
+                    ),
+                )
+            )
+        except ValueError as exc:
+            failures.append(str(exc))
+
+    try:
+        gate = _json_object(snapshots["selected_support_gate"], "selected support gate")
+        if gate.get("status") != "PASS":
+            raise ValueError("selected support gate status is not PASS")
+        _strict_true(gate.get("zero_refit"), "selected support gate zero_refit")
+        if gate.get("test_outcomes_used_for_model_selection") is not False:
+            raise ValueError("selected support selection is not test-outcome independent")
+        checks = gate.get("technical_checks")
+        expected_checks = {
+            "exact_22_endpoints",
+            "exact_one_frozen_choice_per_endpoint",
+            "exact_five_seeds_per_choice",
+            "exact_550_locked_prediction_runs",
+            "run_sample_alignment_exact",
+            "ensemble_sample_alignment_exact",
+            "complete_locked_similarity",
+            "all_endpoint_metrics_finite",
+        }
+        if not isinstance(checks, Mapping) or set(checks) != expected_checks:
+            raise ValueError("selected support technical-check inventory is incomplete")
+        for key in sorted(expected_checks):
+            _strict_true(checks.get(key), f"selected support gate {key}")
+
+        selection = snapshots["validation_selected_input_selection"]
+        input_hashes = gate.get("input_sha256")
+        if not isinstance(input_hashes, Mapping):
+            raise ValueError("selected support input hash bindings are missing")
+        if input_hashes.get("selection") != selection.sha256:
+            raise ValueError("selected support selection hash is stale")
+        if (
+            input_hashes.get("analysis_script")
+            != snapshots["selected_support_script"].sha256
+        ):
+            raise ValueError("selected support analysis-script hash is stale")
+
+        coverage = gate.get("coverage")
+        if not isinstance(coverage, Mapping):
+            raise ValueError("selected support coverage block is missing")
+        for key, expected in (
+            ("endpoints", 22),
+            ("classification_endpoints", 13),
+            ("regression_endpoints", 9),
+        ):
+            if _strict_int(coverage.get(key), f"selected support {key}") != expected:
+                raise ValueError(f"selected support {key} is stale")
+
+        _, endpoint_rows = _csv_rows(
+            snapshots["selected_support_by_endpoint"], "selected support endpoints"
+        )
+        _, summary_rows = _csv_rows(
+            snapshots["selected_support_summary"], "selected support summary"
+        )
+        primary_rows = [
+            row
+            for row in summary_rows
+            if row.get("scope") == "all"
+            and row.get("metric") == "support_gain_vs_random"
+        ]
+        if len(primary_rows) != 1:
+            raise ValueError("selected support primary summary row is not unique")
+        primary = primary_rows[0]
+        endpoint_gains = [
+            _number(row.get("support_gain_vs_random"), "selected support endpoint gain")
+            for row in endpoint_rows
+        ]
+        positive = sum(value > 0 for value in endpoint_gains)
+        if positive != 20:
+            raise ValueError("selected support favorable-endpoint count is stale")
+        mean_gain = float(np.mean(endpoint_gains))
+        if not _close(_number(primary.get("mean"), "selected support mean"), mean_gain):
+            raise ValueError("selected support primary mean is stale")
+        if _strict_int(primary.get("positive_endpoints"), "selected support positives") != positive:
+            raise ValueError("selected support primary positive count is stale")
+        gate_primary = gate.get("primary_descriptive_result")
+        if not isinstance(gate_primary, Mapping):
+            raise ValueError("selected support gate primary result is missing")
+        if (
+            not _close(_number(gate_primary.get("mean"), "selected support gate mean"), mean_gain)
+            or _strict_int(gate_primary.get("positive_endpoints"), "selected support gate positives")
+            != positive
+            or _strict_int(gate_primary.get("n_endpoints"), "selected support gate endpoints")
+            != 22
+        ):
+            raise ValueError("selected support gate primary result is stale")
+        table_text = snapshots["selected_support_table"].data.decode("utf-8-sig")
+        if "\\begin{tabular}" not in table_text:
+            raise ValueError("selected support LaTeX table is malformed")
+    except (KeyError, UnicodeDecodeError, ValueError, TypeError) as exc:
+        failures.append(str(exc))
+
+    complete = len(failures) == failure_start
+    return (
+        {
+            "status": "PASS" if complete else "HOLD",
+            "required_outputs": len(FINAL_SELECTED_SUPPORT_OUTPUTS),
+            "analysis_script_present": "selected_support_script" in snapshots,
+            "observed_rows": observed_rows,
+            "expected_rows": dict(FINAL_SELECTED_SUPPORT_EXPECTED_ROWS),
+            "zero_refit": True,
+            "post_hoc_descriptive": True,
+            "raw_nonportable_files": sorted(
+                filename
+                for logical_name, (filename, _) in FINAL_SELECTED_SUPPORT_OUTPUTS.items()
+                if logical_name in FINAL_SELECTED_SUPPORT_NONPORTABLE
+            ),
+            "sanitized_public_metadata_files": sorted(
+                FINAL_SELECTED_SUPPORT_NONPORTABLE.values()
+            ),
+            "directly_releasable": complete,
+        },
+        public_payloads,
+    )
+
+
+def _audit_validation_selected_release_evidence(
+    *, snapshots: Mapping[str, FileSnapshot], failures: list[str]
+) -> dict[str, Any]:
+    """Validate the hash-bound selected-only calibration/reliability sensitivity."""
+
+    failure_start = len(failures)
+    observed_rows: dict[str, int] = {}
+    for logical_name, expected_rows in FINAL_VALIDATION_SELECTED_EXPECTED_ROWS.items():
+        snapshot = snapshots.get(logical_name)
+        if snapshot is None:
+            continue
+        try:
+            _, rows = _csv_rows(snapshot, logical_name)
+            observed_rows[logical_name] = len(rows)
+            if len(rows) != expected_rows:
+                raise ValueError(
+                    f"{logical_name} has {len(rows)} rows, expected {expected_rows}"
+                )
+        except ValueError as exc:
+            failures.append(str(exc))
+
+    try:
+        manifest = _json_object(
+            snapshots["validation_selected_manifest"],
+            "validation selected sensitivity manifest",
+        )
+        if manifest.get("technical_status") != "PASS":
+            raise ValueError("validation selected manifest status is not PASS")
+        _strict_true(
+            manifest.get("strict_final_contract"),
+            "validation selected strict_final_contract",
+        )
+        checks = manifest.get("checks")
+        if not isinstance(checks, Mapping):
+            raise ValueError("validation selected checks are missing")
+        for key in (
+            "endpoint_level_aggregation",
+            "one_validation_selected_model_per_endpoint",
+            "source_inputs_sha256_and_size_unchanged",
+            "zero_refit",
+        ):
+            _strict_true(checks.get(key), f"validation selected {key}")
+        for key, expected in (
+            ("selected_calibration_endpoint_method_rows", 35),
+            ("selected_conditional_rows", 66),
+        ):
+            if _strict_int(checks.get(key), f"validation selected {key}") != expected:
+                raise ValueError(f"validation selected {key} is stale")
+
+        input_records = manifest.get("input_files")
+        if not isinstance(input_records, list):
+            raise ValueError("validation selected input bindings are missing")
+        input_by_path = {
+            str(record.get("path")): record
+            for record in input_records
+            if isinstance(record, Mapping)
+        }
+        if len(input_by_path) != len(FINAL_VALIDATION_SELECTED_INPUTS):
+            raise ValueError("validation selected input inventory is incomplete")
+        for logical_name, (relative, _) in FINAL_VALIDATION_SELECTED_INPUTS.items():
+            snapshot = snapshots[logical_name]
+            _validate_snapshot_binding(
+                input_by_path.get(relative),
+                snapshot,
+                f"validation selected input {relative}",
+                failures,
+            )
+
+        output_records = manifest.get("output_files")
+        if not isinstance(output_records, list):
+            raise ValueError("validation selected output bindings are missing")
+        output_by_path = {
+            str(record.get("path")): record
+            for record in output_records
+            if isinstance(record, Mapping)
+        }
+        expected_output_paths = {
+            "results/tables/validation_selected_sensitivity_final/" + filename
+            for logical_name, (filename, _) in FINAL_VALIDATION_SELECTED_OUTPUTS.items()
+            if logical_name != "validation_selected_manifest"
+        }
+        if set(output_by_path) != expected_output_paths:
+            raise ValueError("validation selected output inventory is incomplete")
+        logical_by_path = {
+            "results/tables/validation_selected_sensitivity_final/" + filename: logical_name
+            for logical_name, (filename, _) in FINAL_VALIDATION_SELECTED_OUTPUTS.items()
+        }
+        for relative, record in output_by_path.items():
+            logical_name = logical_by_path[relative]
+            expected_rows = FINAL_VALIDATION_SELECTED_EXPECTED_ROWS.get(logical_name)
+            _validate_snapshot_binding(
+                record,
+                snapshots[logical_name],
+                f"validation selected output {relative}",
+                failures,
+                row_count=expected_rows,
+            )
+        interpretation = snapshots["validation_selected_interpretation"].data.decode(
+            "utf-8-sig"
+        )
+        table_text = snapshots["validation_selected_table"].data.decode("utf-8-sig")
+        interpretation_lower = interpretation.lower()
+        if "post-hoc" not in interpretation_lower or "zero-refit" not in interpretation_lower:
+            raise ValueError("validation selected interpretation omits post-hoc limitation")
+        if "\\begin{tabular}" not in table_text:
+            raise ValueError("validation selected LaTeX table is malformed")
+    except (KeyError, UnicodeDecodeError, ValueError, TypeError) as exc:
+        failures.append(str(exc))
+
+    complete = len(failures) == failure_start
+    return {
+        "status": "PASS" if complete else "HOLD",
+        "required_outputs": len(FINAL_VALIDATION_SELECTED_OUTPUTS),
+        "required_inputs": len(FINAL_VALIDATION_SELECTED_INPUTS),
+        "analysis_script_present": "validation_selected_script" in snapshots,
+        "observed_rows": observed_rows,
+        "expected_rows": dict(FINAL_VALIDATION_SELECTED_EXPECTED_ROWS),
+        "zero_refit": True,
+        "post_hoc_not_primary_claim": True,
+        "directly_releasable": complete,
+    }
+
+
 def audit_final_supplements(root: Path) -> FinalSupplementAudit:
     """Fail-closed audit of the locked supplementary release evidence.
 
@@ -5663,6 +6083,8 @@ def audit_final_supplements(root: Path) -> FinalSupplementAudit:
     crossfit_dir = tables / "crossfit_oracle_sensitivity_final"
     crossfit_influence_dir = tables / "crossfit_influence_sensitivity_final"
     reviewer_defense_dir = tables / "reviewer_defense_sensitivities_final"
+    selected_support_dir = tables / "selected_support_risk_coverage_final"
+    validation_selected_dir = tables / "validation_selected_sensitivity_final"
     predictions_dir = root / "results" / "predictions" / "cleaned_sensitivity_locked_cache"
 
     fixed_files: dict[str, tuple[Path, str]] = {
@@ -5823,6 +6245,20 @@ def audit_final_supplements(root: Path) -> FinalSupplementAudit:
     )
     for logical_name, (filename, role) in FINAL_REVIEWER_DEFENSE_OUTPUTS.items():
         fixed_files[logical_name] = (reviewer_defense_dir / filename, role)
+    fixed_files["selected_support_script"] = (
+        root / "experiments" / "analyze_selected_support_risk_coverage.py",
+        "selected_support_analysis_code",
+    )
+    for logical_name, (filename, role) in FINAL_SELECTED_SUPPORT_OUTPUTS.items():
+        fixed_files[logical_name] = (selected_support_dir / filename, role)
+    fixed_files["validation_selected_script"] = (
+        root / "experiments" / "analyze_validation_selected_sensitivity.py",
+        "validation_selected_analysis_code",
+    )
+    for logical_name, (filename, role) in FINAL_VALIDATION_SELECTED_OUTPUTS.items():
+        fixed_files[logical_name] = (validation_selected_dir / filename, role)
+    for logical_name, (relative, role) in FINAL_VALIDATION_SELECTED_INPUTS.items():
+        fixed_files[logical_name] = (root / relative, role)
     for logical_name, (relative, _) in FINAL_MANUSCRIPT_FIGURES.items():
         fixed_files[logical_name] = (
             root / relative,
@@ -6063,6 +6499,20 @@ def audit_final_supplements(root: Path) -> FinalSupplementAudit:
         failures=failures,
     )
     reviewer_defense_details = _audit_reviewer_defense_release_evidence(
+        snapshots=snapshots,
+        failures=failures,
+    )
+    selected_support_details, selected_support_public_payloads = (
+        _audit_selected_support_release_evidence(
+            root=root,
+            catalog=catalog,
+            fixed_files=fixed_files,
+            snapshots=snapshots,
+            failures=failures,
+        )
+    )
+    public_extra_payloads.extend(selected_support_public_payloads)
+    validation_selected_details = _audit_validation_selected_release_evidence(
         snapshots=snapshots,
         failures=failures,
     )
@@ -7133,6 +7583,8 @@ def audit_final_supplements(root: Path) -> FinalSupplementAudit:
         "crossfit_oracle_sensitivity": crossfit_details,
         "crossfit_influence_sensitivity": crossfit_influence_details,
         "reviewer_defense_sensitivities": reviewer_defense_details,
+        "selected_support_risk_coverage": selected_support_details,
+        "validation_selected_sensitivity": validation_selected_details,
         "superseded_reference_audits_excluded": [
             "paper/reference_authenticity_audit_20260714.md",
             "paper/reference_audit.md",

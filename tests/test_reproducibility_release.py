@@ -931,6 +931,206 @@ def _write_reviewer_defense_supplements(root: Path, tables: Path) -> None:
     )
 
 
+def _write_selected_model_sensitivities(root: Path, tables: Path) -> None:
+    selection_path = (
+        tables / "reliability_regret_final" / "validation_selection_by_task.csv"
+    )
+    conditional_path = (
+        tables
+        / "conditional_reliability_final"
+        / "conditional_reliability_by_task_model.csv"
+    )
+    calibration_path = tables / "calibration_summary_final.csv"
+    tasks = sorted(release.normalize_task(task) for task in release.TDC_TASKS)
+    models = (*release.TRADITIONAL_MODELS, *release.SUBMISSION_NEURAL_MODELS)
+    _write_csv(
+        selection_path,
+        ["task", "validation_selected_model"],
+        [
+            {"task": task, "validation_selected_model": models[index % len(models)]}
+            for index, task in enumerate(tasks)
+        ],
+    )
+    _write_csv(conditional_path, ["value"], [{"value": 1}])
+    _write_csv(calibration_path, ["value"], [{"value": 1}])
+
+    validation_dir = tables / "validation_selected_sensitivity_final"
+    validation_dir.mkdir(parents=True, exist_ok=True)
+    validation_rows = {
+        "selected_calibration_by_endpoint_method.csv": 35,
+        "selected_calibration_gain_summary.csv": 4,
+        "selected_conditional_reliability_by_endpoint.csv": 66,
+        "selected_conditional_reliability_summary.csv": 18,
+        "selected_conformal_summary.csv": 1,
+    }
+    for filename, rows in validation_rows.items():
+        _write_csv(
+            validation_dir / filename,
+            ["value"],
+            [{"value": index} for index in range(rows)],
+        )
+    (validation_dir / "VALIDATION_SELECTED_SENSITIVITY.md").write_text(
+        "# Synthetic post-hoc sensitivity\n\nZero-refit descriptive check.\n",
+        encoding="utf-8",
+    )
+    (validation_dir / "table_supp_validation_selected_sensitivity.tex").write_text(
+        "\\begin{tabular}{l}value \\\\ \\end{tabular}\n",
+        encoding="utf-8",
+    )
+    validation_output_names = {
+        filename
+        for logical_name, (filename, _) in release.FINAL_VALIDATION_SELECTED_OUTPUTS.items()
+        if logical_name != "validation_selected_manifest"
+    }
+    manifest = {
+        "technical_status": "PASS",
+        "strict_final_contract": True,
+        "checks": {
+            "endpoint_level_aggregation": True,
+            "one_validation_selected_model_per_endpoint": True,
+            "source_inputs_sha256_and_size_unchanged": True,
+            "zero_refit": True,
+            "selected_calibration_endpoint_method_rows": 35,
+            "selected_conditional_rows": 66,
+        },
+        "input_files": [
+            {
+                **_file_binding(root / relative),
+                "path": relative,
+            }
+            for relative, _ in release.FINAL_VALIDATION_SELECTED_INPUTS.values()
+        ],
+        "output_files": [
+            {
+                **_file_binding(validation_dir / filename),
+                "path": (
+                    "results/tables/validation_selected_sensitivity_final/"
+                    + filename
+                ),
+                **(
+                    {"rows": validation_rows[filename]}
+                    if filename in validation_rows
+                    else {}
+                ),
+            }
+            for filename in sorted(validation_output_names)
+        ],
+    }
+    (validation_dir / "validation_selected_sensitivity_manifest.json").write_text(
+        json.dumps(manifest), encoding="utf-8"
+    )
+
+    support_dir = tables / "selected_support_risk_coverage_final"
+    support_dir.mkdir(parents=True, exist_ok=True)
+    support_simple_rows = {
+        "ensemble_sample_alignment_audit.csv": 110,
+        "model_seed_availability.csv": 110,
+        "run_sample_alignment_audit.csv": 550,
+    }
+    for filename, rows in support_simple_rows.items():
+        _write_csv(
+            support_dir / filename,
+            ["value"],
+            [{"value": index} for index in range(rows)],
+        )
+    _write_csv(
+        support_dir / "prediction_input_audit.csv",
+        ["path", "included"],
+        [
+            {"path": str((root / f"private/prediction_{index}.csv").resolve()), "included": True}
+            for index in range(550)
+        ],
+    )
+    _write_csv(
+        support_dir / "validation_seed_scores_recomputed.csv",
+        ["source", "value"],
+        [
+            {"source": str((root / f"private/validation_{index}.csv").resolve()), "value": 1}
+            for index in range(550)
+        ],
+    )
+    endpoint_gains = [0.2] * 20 + [-0.1] * 2
+    _write_csv(
+        support_dir / "selected_support_risk_coverage_by_endpoint.csv",
+        ["task", "support_gain_vs_random"],
+        [
+            {"task": task, "support_gain_vs_random": endpoint_gains[index]}
+            for index, task in enumerate(tasks)
+        ],
+    )
+    _write_csv(
+        support_dir / "selected_support_risk_coverage_curve.csv",
+        ["coverage", "cumulative_risk"],
+        [
+            {"coverage": (index + 1) / 32758, "cumulative_risk": 0.1}
+            for index in range(32758)
+        ],
+    )
+    mean_gain = float(np.mean(endpoint_gains))
+    summary_rows = [
+        {
+            "scope": "all",
+            "metric": "support_gain_vs_random",
+            "mean": mean_gain,
+            "positive_endpoints": 20,
+        },
+        *[
+            {
+                "scope": "synthetic",
+                "metric": f"metric_{index}",
+                "mean": 0.0,
+                "positive_endpoints": 0,
+            }
+            for index in range(8)
+        ],
+    ]
+    _write_csv(
+        support_dir / "selected_support_risk_coverage_summary.csv",
+        ["scope", "metric", "mean", "positive_endpoints"],
+        summary_rows,
+    )
+    (support_dir / "table_selected_support_risk_coverage.tex").write_text(
+        "\\begin{tabular}{l}value \\\\ \\end{tabular}\n",
+        encoding="utf-8",
+    )
+    support_gate = {
+        "status": "PASS",
+        "zero_refit": True,
+        "test_outcomes_used_for_model_selection": False,
+        "technical_checks": {
+            "exact_22_endpoints": True,
+            "exact_one_frozen_choice_per_endpoint": True,
+            "exact_five_seeds_per_choice": True,
+            "exact_550_locked_prediction_runs": True,
+            "run_sample_alignment_exact": True,
+            "ensemble_sample_alignment_exact": True,
+            "complete_locked_similarity": True,
+            "all_endpoint_metrics_finite": True,
+        },
+        "coverage": {
+            "endpoints": 22,
+            "classification_endpoints": 13,
+            "regression_endpoints": 9,
+        },
+        "input_sha256": {
+            "selection": _file_binding(selection_path)["sha256"],
+            "prediction_files_combined": "a" * 64,
+            "similarity_caches_combined": "b" * 64,
+            "analysis_script": _file_binding(
+                root / "experiments/analyze_selected_support_risk_coverage.py"
+            )["sha256"],
+        },
+        "primary_descriptive_result": {
+            "mean": mean_gain,
+            "positive_endpoints": 20,
+            "n_endpoints": 22,
+        },
+    }
+    (support_dir / "selected_support_risk_coverage_gate.json").write_text(
+        json.dumps(support_gate), encoding="utf-8"
+    )
+
+
 def _write_final_supplements(paths: dict[str, Path]) -> None:
     root = paths["root"]
     tables = root / "results" / "tables"
@@ -2027,6 +2227,7 @@ def _write_final_supplements(paths: dict[str, Path]) -> None:
     )
 
     _write_reviewer_defense_supplements(root, tables)
+    _write_selected_model_sensitivities(root, tables)
 
     reliability_figures = root / "results" / "figures" / "reliability_regret_final"
     trust_figures = root / "results" / "figures" / "trustworthiness_submission_final"
@@ -2348,6 +2549,31 @@ def test_final_supplements_build_deidentified_prediction_views_and_index_raw_sou
     assert reviewer_gate["post_hoc_not_primary_claim"] is True
     assert reviewer_gate["no_row_level_molecular_output"] is True
     assert reviewer_gate["directly_releasable"] is True
+    support_gate = gate["final_supplements"]["selected_support_risk_coverage"]
+    assert support_gate["status"] == "PASS"
+    assert support_gate["required_outputs"] == len(
+        release.FINAL_SELECTED_SUPPORT_OUTPUTS
+    )
+    assert support_gate["observed_rows"] == release.FINAL_SELECTED_SUPPORT_EXPECTED_ROWS
+    assert support_gate["zero_refit"] is True
+    assert support_gate["post_hoc_descriptive"] is True
+    assert set(support_gate["raw_nonportable_files"]) == {
+        "prediction_input_audit.csv",
+        "validation_seed_scores_recomputed.csv",
+    }
+    selected_gate = gate["final_supplements"]["validation_selected_sensitivity"]
+    assert selected_gate["status"] == "PASS"
+    assert selected_gate["required_outputs"] == len(
+        release.FINAL_VALIDATION_SELECTED_OUTPUTS
+    )
+    assert selected_gate["required_inputs"] == len(
+        release.FINAL_VALIDATION_SELECTED_INPUTS
+    )
+    assert selected_gate["observed_rows"] == (
+        release.FINAL_VALIDATION_SELECTED_EXPECTED_ROWS
+    )
+    assert selected_gate["zero_refit"] is True
+    assert selected_gate["post_hoc_not_primary_claim"] is True
     figure_gate = gate["final_supplements"]["final_manuscript_figures"]
     assert figure_gate["status"] == "PASS"
     assert figure_gate["expected_files"] == 3
@@ -2465,9 +2691,27 @@ def test_final_supplements_build_deidentified_prediction_views_and_index_raw_sou
         )
         assert plan_by_path[relative]["package_action"] == "include"
         assert role in plan_by_path[relative]["artifact_roles"].split(";")
+    for logical_name, (filename, role) in release.FINAL_SELECTED_SUPPORT_OUTPUTS.items():
+        relative = "results/tables/selected_support_risk_coverage_final/" + filename
+        expected_action = (
+            "exclude_nonportable"
+            if logical_name in release.FINAL_SELECTED_SUPPORT_NONPORTABLE
+            else "include"
+        )
+        assert plan_by_path[relative]["package_action"] == expected_action
+        assert role in plan_by_path[relative]["artifact_roles"].split(";")
+    for filename, role in release.FINAL_VALIDATION_SELECTED_OUTPUTS.values():
+        relative = "results/tables/validation_selected_sensitivity_final/" + filename
+        assert plan_by_path[relative]["package_action"] == "include"
+        assert role in plan_by_path[relative]["artifact_roles"].split(";")
+    for relative, role in release.FINAL_VALIDATION_SELECTED_INPUTS.values():
+        assert plan_by_path[relative]["package_action"] == "include"
+        assert role in plan_by_path[relative]["artifact_roles"].split(";")
     for name in (
         "crossfit_prediction_input_audit.csv",
         "crossfit_validation_seed_scores.csv",
+        "selected_support_prediction_input_audit.csv",
+        "selected_support_validation_seed_scores_recomputed.csv",
     ):
         path = paths["output"] / "public/metadata" / name
         assert path.is_file()
@@ -2743,6 +2987,58 @@ def test_formal_release_holds_when_required_public_test_is_missing(
     assert any(
         "required public test paths missing on disk: 1" in failure
         for failure in code_gate["failures"]
+    )
+
+
+def test_formal_release_holds_when_selected_support_gate_is_stale(
+    tmp_path: Path,
+) -> None:
+    paths = _synthetic_project(tmp_path)
+    _write_final_supplements(paths)
+    gate_path = (
+        paths["root"]
+        / "results/tables/selected_support_risk_coverage_final/"
+        "selected_support_risk_coverage_gate.json"
+    )
+    payload = json.loads(gate_path.read_text(encoding="utf-8"))
+    payload["primary_descriptive_result"]["mean"] = 0.99
+    gate_path.write_text(json.dumps(payload), encoding="utf-8")
+
+    manifest = _build_final(paths)
+    details = manifest["gate"]["final_supplements"][
+        "selected_support_risk_coverage"
+    ]
+    assert manifest["gate"]["status"] == "HOLD"
+    assert details["status"] == "HOLD"
+    assert any(
+        "selected support gate primary result is stale" in failure
+        for failure in manifest["gate"]["failures"]
+    )
+
+
+def test_formal_release_holds_when_validation_selected_binding_is_stale(
+    tmp_path: Path,
+) -> None:
+    paths = _synthetic_project(tmp_path)
+    _write_final_supplements(paths)
+    manifest_path = (
+        paths["root"]
+        / "results/tables/validation_selected_sensitivity_final/"
+        "validation_selected_sensitivity_manifest.json"
+    )
+    payload = json.loads(manifest_path.read_text(encoding="utf-8"))
+    payload["output_files"][0]["sha256"] = "0" * 64
+    manifest_path.write_text(json.dumps(payload), encoding="utf-8")
+
+    manifest = _build_final(paths)
+    details = manifest["gate"]["final_supplements"][
+        "validation_selected_sensitivity"
+    ]
+    assert manifest["gate"]["status"] == "HOLD"
+    assert details["status"] == "HOLD"
+    assert any(
+        "validation selected output" in failure and "SHA-256 is stale" in failure
+        for failure in manifest["gate"]["failures"]
     )
 
 
