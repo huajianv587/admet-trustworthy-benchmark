@@ -135,9 +135,10 @@ python experiments/build_reproducibility_release.py \
 
 This release-owner audit must be run against the locked internal evidence tree;
 the raw prediction inputs are intentionally absent from the public archive.
-Only paths marked `include` in `release/package_plan.csv` belong in the public
-archive. Do not publish the project directory or the complete `release/`
-directory wholesale.
+The formal archive is assembled from rows marked `include` in the release
+owner's internal `release/package_plan.csv`. That internal ledger also records
+excluded nonpublic paths and is intentionally not bundled. Do not publish the
+project directory or the complete `release/` directory wholesale.
 
 ## Author
 

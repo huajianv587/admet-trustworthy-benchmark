@@ -7682,9 +7682,11 @@ result figures are licensed under CC BY 4.0 as described in
 Citation metadata are provided in `CITATION.cff` and `.zenodo.json`; the DOI
 must not be asserted until the public Zenodo record resolves.
 
-This directory is generated. Assemble an upload only from rows marked `include`
-in the release package plan, and omit AppleDouble `._*` sidecars. Do not publish
-the repository or release directory wholesale.
+This public subtree was generated from rows marked `include` in the release
+owner's internal package plan. That internal ledger also records excluded
+nonpublic paths and is intentionally not distributed. Public consumers should
+use the formal archive as supplied and should not expect intentionally excluded
+inputs to be present.
 """
 
 

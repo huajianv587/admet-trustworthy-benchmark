@@ -24,6 +24,7 @@ def test_public_environment_contract_covers_gin_and_documents_chemprop() -> None
     environment = (root / "environment.yml").read_text(encoding="utf-8")
     pyproject = (root / "pyproject.toml").read_text(encoding="utf-8")
     readme = (root / "README.md").read_text(encoding="utf-8")
+    normalized_readme = " ".join(readme.split())
 
     for dependency_text in (requirements, environment, pyproject):
         assert "torch-geometric>=2.4" in dependency_text
@@ -33,6 +34,10 @@ def test_public_environment_contract_covers_gin_and_documents_chemprop() -> None
     assert "PyTorch 2.7.1+cu128" in readme
     assert "CUDA runtime 12.8" in readme
     assert "--chemprop-bin .venv-chemprop/bin/chemprop" in readme
+    assert (
+        "release owner's internal `release/package_plan.csv`" in normalized_readme
+    )
+    assert "is intentionally not bundled" in normalized_readme
 
 
 def _write_csv(path: Path, columns: list[str], rows: list[dict]) -> None:
@@ -2747,10 +2752,13 @@ def test_final_supplements_build_deidentified_prediction_views_and_index_raw_sou
     public_readme = (paths["output"] / "public/README.md").read_text(
         encoding="utf-8"
     )
+    normalized_public_readme = " ".join(public_readme.split())
     assert "public prediction views alone cannot recompute" in public_readme
     assert "obtain the matching TDC ADMET source" in public_readme
     assert "locally reconstruct the internal" in public_readme
     assert "not a direct runner" in public_readme
+    assert "release owner's internal package plan" in normalized_public_readme
+    assert "is intentionally not distributed" in normalized_public_readme
     with (paths["output"] / "public/metadata/run_seeds_and_hashes.csv").open(
         newline="", encoding="utf-8"
     ) as handle:
