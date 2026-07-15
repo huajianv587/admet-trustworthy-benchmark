@@ -184,3 +184,17 @@ def test_locked_crossfit_exact_sign_flip_and_zero_redundancy():
     assert np.isclose(with_zeros[0], without_zeros[0], rtol=0.0, atol=0.0)
     assert with_zeros[1] == 4 * without_zeros[1]
     assert with_zeros[2] == 4 * without_zeros[2]
+
+
+def test_supplementary_crossfit_table_distinguishes_heuristic_threshold_from_validation_tolerance():
+    root = Path(__file__).resolve().parents[1]
+    table_path = (
+        root
+        / "results/tables/manuscript_final/"
+        "table_supp_crossfit_oracle_summary.tex"
+    )
+    if not table_path.is_file():
+        pytest.skip("locked supplementary cross-fit table is absent")
+    table = table_path.read_text(encoding="utf-8")
+    assert "Above heuristic threshold" in table
+    assert "Above tolerance" not in table

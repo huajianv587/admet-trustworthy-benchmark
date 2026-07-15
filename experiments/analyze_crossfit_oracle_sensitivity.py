@@ -1682,7 +1682,7 @@ def write_supplementary_summary_table(
         "brier": "Brier",
         "ece_5bin": "ECE (5 bins)",
         "ece_10bin": "ECE (10 bins)",
-        "applicability_alignment": "Applicability Spearman loss",
+        "applicability_alignment": "Morgan support/error rank loss",
         "selective_relative_excess_aurc": "Primary relative excess AURC",
         "selective_relative_excess_aurc_log_loss": "Log-loss relative excess AURC",
         "conformal_coverage_error": "Validation-residual coverage error",
@@ -1693,7 +1693,7 @@ def write_supplementary_summary_table(
         "\\toprule",
         (
             "Grouping & Dimension & $n$ & Mean signed $D$ [95\\% endpoint interval] & "
-            "Positive endpoints & Above tolerance & Descriptive Holm $p$ & Oracle agreement \\\\"
+            "Positive endpoints & Above heuristic threshold & Descriptive Holm $p$ & Oracle agreement \\\\"
         ),
         "\\midrule",
     ]

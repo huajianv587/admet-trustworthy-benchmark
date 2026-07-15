@@ -106,7 +106,7 @@ DIMENSION_LABELS = {
     "uncalibrated_brier": "Brier score",
     "conformal_coverage_error": "Validation-residual\ncoverage error",
     "selective_gain_30pct": "Selective gain\n(30% rejection)",
-    "applicability_alignment": "Applicability-\ndomain alignment",
+    "applicability_alignment": "Morgan support/error\nrank association",
 }
 
 MODEL_LABELS = {
@@ -652,7 +652,9 @@ def figure_conditional_reliability(
     )
     ax_scores.set_xlabel("Outside − inside score\n(positive = worse outside)")
     ax_scores.set_title(
-        "Brier degradation is consistent;\nECE is mixed", loc="left", pad=30
+        "Candidate-pool Brier degradation is consistent;\nECE is mixed",
+        loc="left",
+        pad=30,
     )
     ax_scores.grid(axis="x", color=GRID_GREY, linewidth=0.6)
     ax_scores.set_axisbelow(True)
@@ -687,7 +689,7 @@ def figure_conditional_reliability(
         color="#F2C9B9",
         edgecolor=ORANGE,
         linewidth=0.7,
-        label="Expected outside\ndegradation",
+        label="Analysis-locked favorable\ndirection",
     )
     ax_direction.barh(
         y_direction,
@@ -697,7 +699,7 @@ def figure_conditional_reliability(
         edgecolor=MID_GREY,
         linewidth=0.7,
         hatch="///",
-        label="Opposite / no\ndegradation",
+        label="Opposite / nonpositive\ndirection",
     )
     ax_direction.axvline(0.5, color=MID_GREY, linestyle="--", linewidth=0.8)
     ax_direction.set_xlim(0, 1.0)
@@ -738,7 +740,7 @@ def figure_conditional_reliability(
     add_panel_label(ax_direction, "C", y=1.14)
 
     fig.suptitle(
-        "Outside-support prediction error rises,\nwhile reliability shifts are metric-dependent",
+        "Candidate-pool outside-support error rises,\nwhile reliability shifts are metric-dependent",
         x=0.08,
         y=0.99,
         ha="left",
@@ -761,8 +763,8 @@ def figure_conditional_reliability(
     total_endpoints = int(conditional_rows["task"].nunique())
     excluded = total_endpoints - int(error_stats["n_endpoints"])
     exclusion_note = (
-        f" {excluded} endpoint was ineligible at this threshold because a domain subset "
-        "did not meet the predefined minimum sample count."
+        f" {excluded} endpoint was ineligible at this threshold because a support group "
+        "did not meet the analysis-locked minimum group size."
         if excluded
         else ""
     )
@@ -774,7 +776,7 @@ def figure_conditional_reliability(
     figure_note = textwrap.fill(
         (
             "Endpoint is the comparison unit; task-model values are averaged within endpoint. "
-            "Positive direction denotes worse outside-domain reliability or stronger inside-domain utility. "
+            "Positive direction denotes worse outside-support reliability or stronger inside-support utility. "
             + matrix_note
             + exclusion_note
         ),
@@ -957,13 +959,20 @@ def figure_calibration_gains(
         handles=[
             Line2D([0], [0], marker="o", color="none", markerfacecolor=BLUE, markeredgecolor="white", label="Endpoint improved"),
             Line2D([0], [0], marker="x", color=ORANGE, linestyle="none", label="Endpoint failed to improve"),
-            Line2D([0], [0], marker="D", color=DARK, linestyle="none", label="Endpoint mean ± 95% bootstrap interval"),
+            Line2D(
+                [0],
+                [0],
+                marker="D",
+                color=DARK,
+                linestyle="none",
+                label="Endpoint mean and 95% endpoint-bootstrap interval",
+            ),
         ],
         loc="lower left",
         frameon=False,
     )
     fig.suptitle(
-        "Post-hoc calibration gains are metric- and endpoint-dependent",
+        "Candidate-pool calibration gains are metric- and endpoint-dependent",
         x=0.08,
         y=0.982,
         ha="left",
@@ -994,7 +1003,8 @@ def figure_calibration_gains(
         (
             f"Each point is an endpoint mean across {model_description} and five seeds "
             "(13 classification endpoints). Positive gain indicates improvement; crosses mark "
-            "zero or negative gain. Calibration mappings were fitted on validation predictions only."
+            "zero or negative gain. Mappings used validation labels that also informed checkpointing and selection; "
+            "selected-model effects are reported separately in the Supplementary Information."
         ),
         ha="left",
         va="bottom",

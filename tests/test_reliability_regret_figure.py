@@ -78,9 +78,9 @@ def test_svg_exposes_scope_model_pool_and_marker_semantics():
     assert "TRADITIONAL-MODEL EXPLORATORY MATRIX" in svg
     assert "NOT THE FINAL FIVE-MODEL ANALYSIS" in svg
     assert "Model pool on every endpoint: LGBM + RF + XGB" in svg
-    assert "Practical: raw regret exceeds" in svg
-    assert "Tie-robust: remains practical" in svg
-    assert "Normalized reliability regret" in svg
+    assert "Magnitude marker: raw regret exceeds" in svg
+    assert "Tie-robust: remains above threshold" in svg
+    assert "Normalized dimension-specific regret" in svg
 
 
 def test_final_completed_scope_has_reader_facing_descriptive_label():

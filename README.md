@@ -6,10 +6,14 @@ This repository supports the study:
 > A 22-Endpoint Audit on Scaffold-Disjoint TDC ADMET Tests**
 
 The study asks a practical model-selection question: after an ADMET model is
-chosen using one predictive random-resplit validation metric, what reliability
-is lost in calibration, selective prediction, validation-residual coverage, or chemical-support
-alignment? It is a model-selection and evaluation study, not a new molecular
-architecture or a state-of-the-art leaderboard claim.
+chosen using one predictive random-resplit validation metric, what
+candidate-pool opportunity gaps remain in calibration, selective prediction,
+validation-residual coverage, and Morgan support/error rank association? The
+association measures whether fingerprint support ranks lower-error molecules;
+its dimension-specific candidate reference is neither an accuracy oracle nor a
+generally reliability-optimal model. This is a model-selection and evaluation
+study, not a new molecular architecture or a state-of-the-art leaderboard
+claim.
 
 ## Study matrix
 
@@ -24,7 +28,26 @@ architecture or a state-of-the-art leaderboard claim.
 The primary benchmark fixes each endpoint's model using mean designated
 validation performance before auditing held-out reliability. A zero-refit,
 500-repeat scaffold-group cross-fit then probes the sensitivity of the
-candidate-pool oracle comparison without changing any trained prediction.
+dimension-specific candidate-pool comparison without changing any trained
+prediction.
+
+## Selected-model zero-refit sensitivities
+
+For the validation-selected models, ranking test molecules from high to low
+Morgan support reduced risk--coverage AURC relative to random ordering by a
+mean normalized 0.1456 (95% endpoint-bootstrap interval 0.0936--0.2024), with
+a favorable direction on 20/22 endpoints. Ensemble uncertainty gave a larger
+mean gain of 0.3278 (0.2464--0.4145), and Morgan support had the lower paired
+AURC on only 6/22 endpoints. Morgan support was therefore informative in this
+benchmark but different from and generally weaker than ensemble uncertainty;
+their combination was not tested.
+
+For the 13 selected classification models, validation-fitted isotonic mapping
+improved ten-bin ECE on 9/13 endpoint means but Brier score on 7/13; the mean
+Brier-gain interval crossed zero. These mappings reused validation labels that
+had informed checkpointing and model selection, so they do not represent an
+independent calibration cohort. Both analyses are post-hoc descriptive
+sensitivities and establish neither external nor prospective validity.
 
 ## Reproducibility boundary
 
@@ -38,10 +61,10 @@ It deliberately excludes:
 - credentials, machine-specific paths, and cluster operator materials; and
 - internal prediction exports that contain nonredistributable source fields.
 
-The released prediction views therefore support alignment and output audits but
-cannot alone reproduce label-dependent metrics. Exact replay requires obtaining
-the matching TDC ADMET data under its original terms and following
-[`docs/MAIN_DATA_PROTOCOL.md`](docs/MAIN_DATA_PROTOCOL.md).
+The released prediction views therefore support sample-identity alignment and
+output audits but cannot alone reproduce label-dependent metrics. Exact replay
+requires obtaining the matching TDC ADMET data under its original terms and
+following [`docs/MAIN_DATA_PROTOCOL.md`](docs/MAIN_DATA_PROTOCOL.md).
 
 ## Environment
 

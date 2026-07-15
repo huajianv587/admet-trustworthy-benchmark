@@ -132,8 +132,8 @@ DIMENSIONS = [
     },
     {
         "id": "applicability_alignment",
-        "label": ["Applicability", "alignment"],
-        "detail": "all endpoints",
+        "label": ["Morgan support/error", "rank association"],
+        "detail": "Spearman",
     },
 ]
 
@@ -467,7 +467,7 @@ def build_svg(
         f'height="{HEIGHT_IN}in" viewBox="0 0 {WIDTH} {HEIGHT}" '
         'role="img" aria-labelledby="figure-title figure-desc">',
         '<title id="figure-title">Validation-selected reliability regret across 22 ADMET endpoints</title>',
-        '<desc id="figure-desc">Heatmap of normalized reliability regret after validation-only model selection. Circles mark practical regret and diamonds mark effects robust to validation-score ties.</desc>',
+        '<desc id="figure-desc">Heatmap of normalized dimension-specific candidate-pool regret after validation-only model selection. Circles mark heuristic-threshold exceedance and diamonds mark effects robust to validation-score ties.</desc>',
         f'<metadata id="source-digest">SHA-256 {source_digest}</metadata>',
         "<defs>",
         '<pattern id="na-hatch" width="12" height="12" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">',
@@ -491,7 +491,7 @@ def build_svg(
         _text(
             20,
             98,
-            "Operational loss relative to the test reliability oracle; endpoint is the comparison unit",
+            "Dimension-specific candidate-pool comparison; endpoint is the comparison unit",
             33,
             fill=MUTED,
         )
@@ -707,7 +707,7 @@ def build_svg(
         _text(
             heat_x + heat_w / 2,
             legend_y + 116,
-            "Normalized reliability regret (0 = test reliability oracle; 1 = worst candidate)",
+            "Normalized dimension-specific regret (0 = pool reference; 1 = worst candidate)",
             33,
             anchor="middle",
             fill=MUTED,
@@ -724,7 +724,7 @@ def build_svg(
         _text(
             61,
             footer_y,
-            "Practical: raw regret exceeds the predefined dimension tolerance",
+            "Magnitude marker: raw regret exceeds the analysis-locked threshold",
             33,
         )
     )
@@ -733,7 +733,7 @@ def build_svg(
         _text(
             61,
             footer_y + 53,
-            "Tie-robust: remains practical under the best validation-tied model",
+            "Tie-robust: remains above threshold for the best validation-tied model",
             33,
         )
     )
@@ -753,7 +753,7 @@ def build_svg(
         _text(
             782,
             footer_y + 97,
-            "Dimension meets the descriptive practical-effect rule",
+            "Dimension meets the secondary heuristic magnitude screen",
             33,
         )
     )
@@ -920,10 +920,10 @@ def write_manifest(
         "analysis_timeline_policy": gate.get("analysis_timeline_policy"),
         "encoding": {
             "color": "normalized_regret, fixed 0-1 cividis-like sequential scale",
-            "circle": "raw reliability_regret > locked practical_tolerance",
-            "diamond": "tie_best_case_regret > locked practical_tolerance",
+            "circle": "raw reliability_regret > locked heuristic threshold",
+            "diamond": "tie_best_case_regret > locked heuristic threshold",
             "green_header_rule": (
-                "dimension meets the descriptive practical-effect rule"
+                "dimension meets the secondary heuristic magnitude screen"
             ),
             "na_hatch": "dimension is inapplicable to endpoint task type",
         },
@@ -972,9 +972,9 @@ def write_manifest(
             "22 unique endpoints",
             "one validation-selected model per endpoint across dimensions",
             "normalized regret bounded in [0,1]",
-            "practical markers exactly reproduce locked raw tolerances",
-            "tie-robust markers imply practical markers",
-            "gate and summary practical-signal lists agree",
+            "magnitude markers exactly reproduce locked raw heuristic thresholds",
+            "tie-robust markers imply magnitude markers",
+            "gate and summary magnitude-signal lists agree",
             "scope, model pool, and coverage are printed on the figure",
         ],
         "outputs": {

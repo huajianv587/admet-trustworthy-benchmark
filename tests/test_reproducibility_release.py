@@ -1924,7 +1924,7 @@ def _write_final_supplements(paths: dict[str, Path]) -> None:
     influence_paths["table_supp_crossfit_influence_primary.tex"].write_text(
         "% Post-hoc, zero-refit influence sensitivity\n"
         "% This is not a new primary result or independent validation.\n"
-        "ECE (10 bins)\\\\\nECE (5 bins)\\\\\nApplicability alignment\\\\\n",
+        "ECE (10 bins)\\\\\nECE (5 bins)\\\\\nMorgan support/error rank association\\\\\n",
         encoding="utf-8",
     )
     influence_checks = {

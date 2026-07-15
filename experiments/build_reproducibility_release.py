@@ -4612,7 +4612,7 @@ def _audit_crossfit_influence_release_evidence(
             "not a new primary result or independent validation",
             "ECE (10 bins)",
             "ECE (5 bins)",
-            "Applicability alignment",
+            "Morgan support/error rank association",
         ):
             if required_text not in table_text:
                 raise ValueError(

@@ -900,12 +900,18 @@ def leave_one_model_out_latex(summary: pd.DataFrame) -> str:
             ]
         )
     ].copy()
+    dimension_labels = {
+        "applicability_alignment": "Morgan support/error rank association",
+        "ece": "ECE",
+        "selective_relative_excess_aurc": "Primary relative excess AURC",
+        "selective_relative_excess_aurc_log_loss": "Log-loss relative excess AURC",
+    }
     lines: list[str] = []
     for row in selected.itertuples(index=False):
         lines.append(
             "{} & {} & {} & {:.3f} & {:.3f} & {:.3f} \\\\".format(
                 _tex_escape(row.omitted_model),
-                _tex_escape(row.dimension),
+                _tex_escape(dimension_labels[str(row.dimension)]),
                 int(row.n_endpoints),
                 float(row.mean_normalized_regret),
                 float(row.mean_tie_best_case_normalized_regret),
