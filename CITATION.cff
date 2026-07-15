@@ -3,6 +3,8 @@ message: "If you use this software or its generated benchmark artifacts, please 
 type: software
 title: "Trustworthy ADMET Benchmark: Reliability Regret after Single-Metric Random-Resplit Validation Selection"
 version: 1.0.0
+doi: 10.5281/zenodo.21374237
+repository-code: "https://github.com/huajianv587/admet-trustworthy-benchmark"
 authors:
   - family-names: Jiang
     given-names: Huajian

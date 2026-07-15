@@ -19,6 +19,13 @@
   "language": "eng",
   "license": "other-open",
   "notes": "Mixed licensing: see LICENSE and LICENSE-DATA.md. Raw TDC data, source structures and labels, and model checkpoints are excluded.",
+  "related_identifiers": [
+    {
+      "identifier": "https://github.com/huajianv587/admet-trustworthy-benchmark",
+      "relation": "isSupplementTo",
+      "scheme": "url"
+    }
+  ],
   "title": "Trustworthy ADMET Benchmark: Reliability Regret after Single-Metric Random-Resplit Validation Selection",
   "upload_type": "software",
   "version": "1.0.0"

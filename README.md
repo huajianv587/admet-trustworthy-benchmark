@@ -127,7 +127,10 @@ ORCID: [0009-0001-3992-2286](https://orcid.org/0009-0001-3992-2286)
 ## Citation
 
 Machine-readable citation metadata are provided in [`CITATION.cff`](CITATION.cff).
-Use the Zenodo DOI after the public record has been published and verified.
+The versioned release DOI is
+[10.5281/zenodo.21374237](https://doi.org/10.5281/zenodo.21374237), and the
+browsable source repository is
+[huajianv587/admet-trustworthy-benchmark](https://github.com/huajianv587/admet-trustworthy-benchmark).
 
 ## Licences
 
