@@ -1,0 +1,29 @@
+{
+  "items": {
+    "code_license": {
+      "blocking": true,
+      "decision": "Apache-2.0",
+      "note": "Approved by the release owner on 2026-07-15. Repository source code is licensed under Apache License 2.0; see LICENSE.",
+      "status": "APPROVED"
+    },
+    "generated_predictions_and_metrics_license": {
+      "blocking": true,
+      "decision": "CC-BY-4.0",
+      "note": "Approved by the release owner on 2026-07-15. Generated prediction views, metrics, tables, and original figures are licensed under CC BY 4.0; see LICENSE-DATA.md.",
+      "status": "APPROVED"
+    },
+    "model_checkpoint_release_license": {
+      "blocking": true,
+      "decision": "NOT_RELEASED",
+      "note": "Approved by the release owner on 2026-07-15. Model checkpoints are excluded from the public release; hashes and the exclusion decision remain auditable.",
+      "status": "APPROVED"
+    },
+    "tdc_raw_data_redistribution": {
+      "blocking": false,
+      "decision": "NO_RAW_DATA_PACKAGED",
+      "note": "No raw TDC data are copied; only hashes and source-relative identifiers are indexed.",
+      "status": "NOT_APPLICABLE"
+    }
+  },
+  "schema_version": 1
+}

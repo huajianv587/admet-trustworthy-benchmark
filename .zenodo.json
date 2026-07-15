@@ -1,0 +1,25 @@
+{
+  "access_right": "open",
+  "creators": [
+    {
+      "affiliation": "College of Computing and Data Science (CCDS), Nanyang Technological University, 50 Nanyang Avenue, Singapore 639798, Singapore",
+      "name": "Jiang, Huajian",
+      "orcid": "0009-0001-3992-2286"
+    }
+  ],
+  "description": "Reproducible code, configurations, de-identified prediction views, and audit outputs for a 22-endpoint, five-model, five-seed study of reliability after random-resplit validation-only ADMET model selection under scaffold shift. Source code is Apache-2.0; generated prediction views, metrics, tables, and original figures are CC BY 4.0; model checkpoints and raw TDC data are not released.",
+  "keywords": [
+    "ADMET",
+    "model selection",
+    "calibration",
+    "uncertainty quantification",
+    "applicability domain",
+    "molecular machine learning"
+  ],
+  "language": "eng",
+  "license": "other-open",
+  "notes": "Mixed licensing: see LICENSE and LICENSE-DATA.md. Raw TDC data, source structures and labels, and model checkpoints are excluded.",
+  "title": "Trustworthy ADMET Benchmark: Reliability Regret after Single-Metric Random-Resplit Validation Selection",
+  "upload_type": "software",
+  "version": "1.0.0"
+}

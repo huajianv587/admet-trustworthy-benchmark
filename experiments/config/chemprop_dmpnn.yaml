@@ -1,0 +1,80 @@
+model_id: chemprop_dmpnn
+implementation: chemprop
+chemprop_version: 2.2.1
+rdkit_version: 2026.3.3
+output_dir: results/neural_chemprop
+
+data:
+  loader: admet_benchmark.data_loader.load_tdc_official
+  split_source: locked_cache
+  split_algorithm: sklearn_train_test_split_test_size_0.125_random_state_task_seed_classification_stratified_v1
+  preserve_existing_train_valid_test: true
+  model_input_representation_policy: tdc_legacy_pyridine_n_oxide_v1
+  prediction_identity_retains_original_smiles: true
+  split_column_values: [train, val, test]
+  smiles_column: smiles
+  target_column: target
+
+seeds: [1, 2, 3, 4, 5]
+tasks:
+  - Caco2_Wang
+  - HIA_Hou
+  - Pgp_Broccatelli
+  - Bioavailability_Ma
+  - Lipophilicity_AstraZeneca
+  - Solubility_AqSolDB
+  - BBB_Martins
+  - PPBR_AZ
+  - VDss_Lombardo
+  - CYP2C9_Veith
+  - CYP2D6_Veith
+  - CYP3A4_Veith
+  - CYP2C9_Substrate_CarbonMangels
+  - CYP2D6_Substrate_CarbonMangels
+  - CYP3A4_Substrate_CarbonMangels
+  - Half_Life_Obach
+  - Clearance_Hepatocyte_AZ
+  - Clearance_Microsome_AZ
+  - LD50_Zhu
+  - hERG
+  - AMES
+  - DILI
+
+architecture:
+  message_type: directed_bond_messages
+  atom_messages: false
+  undirected: false
+  message_hidden_dim: 300
+  depth: 3
+  dropout: 0.0
+  aggregation: norm
+  aggregation_norm: 100
+  ffn_hidden_dim: 300
+  ffn_num_layers: 1
+
+training:
+  epochs: 100
+  patience: 20
+  warmup_epochs: 2
+  batch_size: 64
+  num_workers_per_run: 0
+  data_seed: task_seed
+  pytorch_seed: task_seed
+
+checkpoint_selection:
+  auroc_tasks: validation_auroc
+  auprc_tasks: validation_auprc
+  mae_tasks: validation_mae
+  spearman_tasks: validation_mae_proxy_for_spearman
+  spearman_limitation: >-
+    Chemprop 2.2.1 has no Spearman tracking metric. The four Spearman tasks
+    select their checkpoint by validation MAE and are evaluated finally with
+    the official Spearman metric on validation and test.
+
+scheduling:
+  max_parallel_default: 2
+  max_parallel_allowed: [1, 2, 3, 4]
+  slurm_walltime_hours: 12
+  runner_budget_hours: 11.5
+  stop_start_margin_minutes: 75
+  completion_marker: metrics_json_written_last

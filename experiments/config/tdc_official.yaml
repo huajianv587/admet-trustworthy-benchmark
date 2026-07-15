@@ -1,0 +1,81 @@
+project:
+  title: "Benchmarking Trustworthy ADMET Prediction under Scaffold Shift"
+  main_split: "tdc_official"
+  target_scope: "SCIE_JCR_Q3"
+
+seeds: [1, 2, 3, 4, 5]
+
+data:
+  path: "data/tdc_official"
+  split_source: "locked_cache"
+  split_algorithm: "sklearn_train_test_split_test_size_0.125_random_state_task_seed_classification_stratified_v1"
+  split_source_note: >-
+    Explicit portable protocol used by all five formal model families; never
+    selected implicitly from pytdc availability.
+  preserve_official_test: true
+  preserve_cached_train_val_membership_before_locked_resplit: true
+  smiles_column: "Drug"
+  label_column: "Y"
+
+tasks:
+  absorption:
+    - Caco2_Wang
+    - HIA_Hou
+    - Pgp_Broccatelli
+    - Bioavailability_Ma
+    - Lipophilicity_AstraZeneca
+    - Solubility_AqSolDB
+  distribution:
+    - BBB_Martins
+    - PPBR_AZ
+    - VDss_Lombardo
+  metabolism:
+    - CYP2C9_Veith
+    - CYP2D6_Veith
+    - CYP3A4_Veith
+    - CYP2C9_Substrate_CarbonMangels
+    - CYP2D6_Substrate_CarbonMangels
+    - CYP3A4_Substrate_CarbonMangels
+  excretion:
+    - Half_Life_Obach
+    - Clearance_Hepatocyte_AZ
+    - Clearance_Microsome_AZ
+  toxicity:
+    - LD50_Zhu
+    - hERG
+    - AMES
+    - DILI
+
+models:
+  traditional:
+    - rf
+    - xgboost
+    - lightgbm
+  gnn:
+    - gin
+    - chemprop_dmpnn
+  excluded_legacy:
+    - legacy_node_mpnn
+
+evaluation:
+  classification:
+    - auroc
+    - auprc
+    - mcc
+    - balanced_accuracy
+    - brier
+    - ece
+  regression:
+    - mae
+    - rmse
+    - r2
+    - spearman
+  rejection_fracs: [0.0, 0.1, 0.2, 0.3]
+  tanimoto_bins: [0.0, 0.3, 0.5, 0.7, 0.9, 1.0]
+
+guardrails:
+  no_chemberta: true
+  no_molformer: true
+  no_docking: true
+  no_molecular_generation: true
+  no_wet_lab_claims: true

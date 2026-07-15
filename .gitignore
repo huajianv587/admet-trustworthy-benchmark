@@ -1,0 +1,26 @@
+.DS_Store
+._*
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+data/tdc_official/
+data/moleculenet/
+data/audit/*.csv
+results/**/*.csv
+results/**/*.json
+results/**/*.png
+results/**/*.pdf
+paper/*.aux
+paper/*.bbl
+paper/*.blg
+paper/*.log
+paper/*.out
+paper/*.toc
+
+# Author-controlled metadata is a private build input. Never stage or release it.
+paper/submission_metadata.private.json
+paper/submission_metadata_audit.json

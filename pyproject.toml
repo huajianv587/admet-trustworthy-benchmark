@@ -1,0 +1,46 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "admet-trustworthy-benchmark"
+version = "1.0.0"
+description = "Reliability-regret audit of validation-selected ADMET models under scaffold shift."
+readme = "README.md"
+license = {file = "LICENSE"}
+authors = [
+  {name = "Huajian Jiang", email = "jian0157@e.ntu.edu.sg"},
+]
+requires-python = ">=3.9,<3.12"
+dependencies = [
+  "numpy>=1.23",
+  "pandas>=1.5",
+  "scikit-learn>=1.2",
+  "scipy>=1.9",
+  "pyyaml>=6.0",
+]
+
+[project.optional-dependencies]
+chem = [
+  "rdkit>=2023.9",
+  "pytdc>=0.4.1",
+  "deepchem>=2.8.0",
+]
+models = [
+  "xgboost>=2.0",
+  "lightgbm>=4.0",
+  "torch>=2.1",
+  "torch-geometric>=2.4",
+  "shap>=0.44",
+]
+dev = [
+  "pytest>=7.0",
+  "ruff>=0.4",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]

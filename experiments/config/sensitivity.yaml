@@ -1,0 +1,50 @@
+name: "data_audit_sensitivity"
+purpose: "Audit official data and rerun selected tasks on cleaned data only as supplementary sensitivity analysis."
+main_result_policy: "Do not replace TDC official split tables."
+protocol: "paired-common-test-v1"
+
+design:
+  comparison: "Official-trained and cleaned-trained models are evaluated on the identical cleaned common test set."
+  split_precedence: [test, valid, train]
+  hyperparameters: "Frozen to the traditional benchmark; no sensitivity-specific tuning."
+  model_selection: "None; all three pre-specified traditional models are reported."
+  interpretation: "Supplementary robustness analysis only; official TDC split results remain primary."
+
+cleaning_policy:
+  invalid_smiles: "drop"
+  missing_or_invalid_label: "drop"
+  canonicalization: "RDKit canonical SMILES"
+  within_split_duplicates: "Keep the first row only when labels agree."
+  conflicting_duplicate_labels: "Drop the entire canonical-molecule group; never average or majority-vote."
+  salts_or_mixtures: "Exclude multi-component records containing '.'; do not choose a largest fragment."
+  cross_split_overlap: "Retain held-out records with test > valid > train precedence."
+
+audit:
+  canonical_smiles: true
+  invalid_smiles: true
+  duplicate_smiles: true
+  salts_or_mixtures: true
+  molecule_overlap: true
+  scaffold_overlap: false
+
+selected_tasks_for_cleaned_rerun:
+  - Caco2_Wang
+  - BBB_Martins
+  - PPBR_AZ
+  - Solubility_AqSolDB
+  - CYP2C9_Veith
+  - DILI
+  - AMES
+  - LD50_Zhu
+
+models: [rf, xgboost, lightgbm]
+seeds: [1, 2, 3, 4, 5]
+fingerprint:
+  radius: 2
+  n_bits: 2048
+
+material_change_thresholds:
+  auroc: 0.02
+  auprc: 0.02
+  spearman: 0.03
+  mae_relative: 0.05

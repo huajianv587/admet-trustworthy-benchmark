@@ -1,0 +1,23 @@
+cff-version: 1.2.0
+message: "If you use this software or its generated benchmark artifacts, please cite this release."
+type: software
+title: "Trustworthy ADMET Benchmark: Reliability Regret after Single-Metric Random-Resplit Validation Selection"
+version: 1.0.0
+authors:
+  - family-names: Jiang
+    given-names: Huajian
+    affiliation: "College of Computing and Data Science (CCDS), Nanyang Technological University, 50 Nanyang Avenue, Singapore 639798, Singapore"
+    email: jian0157@e.ntu.edu.sg
+    orcid: "https://orcid.org/0009-0001-3992-2286"
+abstract: >-
+  Reproducible code, configurations, de-identified prediction views, and
+  audit outputs for a 22-endpoint, five-model, five-seed study of reliability
+  after random-resplit validation-only ADMET model selection under scaffold shift.
+keywords:
+  - ADMET
+  - model selection
+  - calibration
+  - uncertainty quantification
+  - applicability domain
+  - molecular machine learning
+license: Apache-2.0

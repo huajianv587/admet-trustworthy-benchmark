@@ -1,0 +1,88 @@
+model_id: gin
+implementation:
+  model: admet_benchmark.neural_models.GINModel
+  runner: experiments/run_neural_a40.py
+  parallel_runner: experiments/run_neural_a40_parallel.py
+output_dir: results/neural
+rdkit_version: 2026.3.3
+
+data:
+  loader: admet_benchmark.data_loader.load_tdc_official
+  split_source: locked_cache
+  split_algorithm: sklearn_train_test_split_test_size_0.125_random_state_task_seed_classification_stratified_v1
+  preserve_official_test: true
+  model_input_representation_policy: tdc_legacy_pyridine_n_oxide_v1
+  prediction_identity_retains_original_smiles: true
+  smiles_column: Drug
+  target_column: Y
+  prediction_columns: [split, smiles, label, prediction]
+
+seeds: [1, 2, 3, 4, 5]
+tasks:
+  - Caco2_Wang
+  - HIA_Hou
+  - Pgp_Broccatelli
+  - Bioavailability_Ma
+  - Lipophilicity_AstraZeneca
+  - Solubility_AqSolDB
+  - BBB_Martins
+  - PPBR_AZ
+  - VDss_Lombardo
+  - CYP2C9_Veith
+  - CYP2D6_Veith
+  - CYP3A4_Veith
+  - CYP2C9_Substrate_CarbonMangels
+  - CYP2D6_Substrate_CarbonMangels
+  - CYP3A4_Substrate_CarbonMangels
+  - Half_Life_Obach
+  - Clearance_Hepatocyte_AZ
+  - Clearance_Microsome_AZ
+  - LD50_Zhu
+  - hERG
+  - AMES
+  - DILI
+
+representation:
+  atom_feature_dim: 117
+  atom_features: [atomic_number, degree, formal_charge, hybridization]
+  uses_connectivity: true
+  uses_bond_attributes: false
+  uses_bond_types: false
+
+architecture:
+  convolution: trainable_epsilon_GINConv
+  hidden_dim: 256
+  num_layers: 5
+  batch_normalization: true
+  pooling: sum
+  dropout: 0.2
+
+training:
+  epochs: 100
+  early_stopping_patience: 20
+  batch_size: 32
+  optimizer: Adam
+  learning_rate: 0.001
+  weight_decay: 0.00001
+  scheduler: ReduceLROnPlateau
+  scheduler_monitor: training_loss
+  scheduler_factor: 0.5
+  scheduler_patience: 10
+  classification_loss: unweighted_BCEWithLogitsLoss
+  regression_loss: unscaled_MSELoss
+  class_weighting: false
+  label_scaling: false
+  validation_selection: correctly_oriented_official_metric
+
+scheduling:
+  max_parallel_default: 8
+  num_gpus: 1
+  slurm_walltime_hours: 12
+  runner_budget_hours: 11.5
+  stop_start_margin_minutes: 75
+  completion_artifacts: [metrics, predictions, checkpoint]
+
+identity_policy:
+  formal_model_id: gin
+  historical_dmpnn_alias: legacy_node_mpnn
+  historical_dmpnn_excluded: true
