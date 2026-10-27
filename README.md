@@ -32,6 +32,12 @@ deployable selector. The current analysis also retains separate post-hoc
 selected-model and cleaning sensitivities; these do not establish external or
 temporal validity.
 
+The grouped nested-refit workflow also includes a secondary-loss audit on
+untouched outer folds. It evaluates Brier/log loss for classification and
+MAE/RMSE for regression after inner-fold family selection; the audit is
+conditional retrospective evidence and does not establish independent
+external validation or change the original `0/150 POWER_FAIL_HOLD` boundary.
+
 ## Selected-model zero-refit sensitivities
 
 For the validation-selected models, ranking test molecules from high to low
@@ -147,10 +153,8 @@ project directory or the complete `release/` directory wholesale.
 
 ## Author
 
-Huajian Jiang  
-College of Computing and Data Science (CCDS)  
-Nanyang Technological University  
-50 Nanyang Avenue, Singapore 639798, Singapore  
+Huajian Jiang
+Nanyang Technological University, Singapore
 ORCID: [0009-0001-3992-2286](https://orcid.org/0009-0001-3992-2286)
 
 ## Citation
@@ -175,11 +179,11 @@ This software and its outputs are research artifacts. They are not clinical,
 regulatory, or stand-alone compound-safety tools.
 
 
-## Current candidate update 2026 10 27
+## Current candidate update 2026 10 28
 
 The canonical manuscript is `docs/MANUSCRIPT_MASTER_20261024.md`, revised
 on 2026-10-26. Current readiness and limits are in
-`docs/SUBMISSION_STATUS_20261026.md`. Formal prediction recomputation and the
+`docs/SCIE_Q2_STATUS_20261028.md`. Formal prediction recomputation and the
 post hoc identity-unit sensitivity are in
 `results/identity_unit_sensitivity_20261026/`. All 550 formal runs are locally
 accessible; the separate Mac replay is not substituted. A complete training

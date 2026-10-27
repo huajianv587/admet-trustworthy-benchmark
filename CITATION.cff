@@ -8,7 +8,7 @@ repository-code: "https://github.com/huajianv587/admet-trustworthy-benchmark"
 authors:
   - family-names: Jiang
     given-names: Huajian
-    affiliation: "College of Computing and Data Science (CCDS), Nanyang Technological University, 50 Nanyang Avenue, Singapore 639798, Singapore"
+    affiliation: "Nanyang Technological University, Singapore"
     email: jian0157@e.ntu.edu.sg
     orcid: "https://orcid.org/0009-0001-3992-2286"
 abstract: >-
@@ -20,8 +20,8 @@ abstract: >-
   and zero-refit selected-model analyses of Morgan-support risk--coverage and
   validation-fitted calibration. Selected-model Morgan-support ordering was
   favorable versus random on 20 of 22 endpoints but generally weaker than
-  ensemble uncertainty; selected-only isotonic mapping improved ECE on 9 of 13
-  endpoint means and Brier score on 7 of 13. These are post-hoc descriptive
+  ensemble uncertainty; selected-only isotonic mapping improved ECE on 11 of 13
+  endpoint means and Brier score on 8 of 13. These are post-hoc descriptive
   sensitivities. Morgan support/error rank association is a support-score
   informativeness measure, not an accuracy or reliability oracle.
 keywords:

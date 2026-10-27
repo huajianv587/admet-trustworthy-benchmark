@@ -2,12 +2,12 @@
   "access_right": "open",
   "creators": [
     {
-      "affiliation": "College of Computing and Data Science (CCDS), Nanyang Technological University, 50 Nanyang Avenue, Singapore 639798, Singapore",
+      "affiliation": "Nanyang Technological University, Singapore",
       "name": "Jiang, Huajian",
       "orcid": "0009-0001-3992-2286"
     }
   ],
-  "description": "Reproducible code, configurations, de-identified prediction views, and audit outputs for a 22-endpoint, five-model, five-seed study of reliability after random-resplit validation-only ADMET model selection on fixed TDC held-out test partitions. The release includes dimension-specific candidate-pool comparisons and zero-refit selected-model analyses of Morgan-support risk--coverage and validation-fitted calibration. Selected-model Morgan-support ordering was favorable versus random on 20 of 22 endpoints but generally weaker than ensemble uncertainty; selected-only isotonic mapping improved ECE on 9 of 13 endpoint means and Brier score on 7 of 13. These are post-hoc descriptive sensitivities. Morgan support/error rank association is a support-score informativeness measure, not an accuracy or reliability oracle. Source code is Apache-2.0; generated prediction views, metrics, tables, and original figures are CC BY 4.0; model checkpoints and raw TDC data are not released.",
+  "description": "Reproducible code, configurations, de-identified prediction views, and audit outputs for a 22-endpoint, five-model, five-seed study of reliability after random-resplit validation-only ADMET model selection on fixed TDC held-out test partitions. The release includes dimension-specific candidate-pool comparisons and zero-refit selected-model analyses of Morgan-support risk--coverage and validation-fitted calibration. Selected-model Morgan-support ordering was favorable versus random on 20 of 22 endpoints but generally weaker than ensemble uncertainty; selected-only isotonic mapping improved ECE on 11 of 13 endpoint means and Brier score on 8 of 13. These are post-hoc descriptive sensitivities. Morgan support/error rank association is a support-score informativeness measure, not an accuracy or reliability oracle. Source code is Apache-2.0; generated prediction views, metrics, tables, and original figures are CC BY 4.0; model checkpoints and raw TDC data are not released.",
   "keywords": [
     "ADMET",
     "QSAR",
