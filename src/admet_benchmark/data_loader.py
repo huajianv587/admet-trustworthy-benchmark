@@ -34,19 +34,15 @@ TDC_TASK_META: dict[str, dict[str, str]] = {
 
 TDC_TASKS = list(TDC_TASK_META)
 
-# Split selection must never depend on whether pytdc happens to be importable in
-# the current environment.  In particular, the remote GPU environment only has
-# the cached benchmark CSV files, while the local analysis environment has
-# pytdc installed.  These two sources intentionally remain distinct and callers
-# must select one explicitly when they need the portable cached protocol.
+# Keep the pytdc and portable cached protocols explicit. The formal remote
+# neural artifacts use the cached protocol; callers must select it directly.
 PYTDC_SPLIT_SOURCE = "pytdc"
 LOCKED_CACHE_SPLIT_SOURCE = "locked_cache"
 SPLIT_SOURCE_CHOICES = (PYTDC_SPLIT_SOURCE, LOCKED_CACHE_SPLIT_SOURCE)
 SplitSource = Literal["pytdc", "locked_cache"]
 
-# This identifier is public provenance, not executable configuration.  Changing
-# the algorithm below requires a new identifier so existing artifacts cannot be
-# mistaken for results from a different validation split.
+# This is public provenance for the cached split contract. A protocol change
+# requires a new identifier so existing artifacts cannot be relabeled silently.
 LOCKED_CACHE_SPLIT_ALGORITHM = (
     "sklearn_train_test_split_test_size_0.125_random_state_task_seed_"
     "classification_stratified_v1"
@@ -91,18 +87,11 @@ def _task_slug(task_name: str) -> str:
 def _load_locked_cache_split(
     task_name: str, data_dir: str | Path, seed: int
 ) -> OfficialSplit:
-    """Load the versioned, portable split used by formal GPU artifacts.
+    """Load the versioned portable split used by formal GPU artifacts.
 
-    The cached directory contains TDC's published test CSV and its combined
-    ``train_val.csv``.  Only ``train_val`` is partitioned.  This is deliberately
-    *not* described as pytdc's ``default`` split: pytdc may select a task-specific
-    scaffold/random procedure, whereas this protocol freezes the exact split
-    already used by the remote formal-neural runs.
-
-    Classification tasks use label stratification.  Regression tasks do not.
-    Membership and row order are deterministic for a task/seed and are preserved
-    by ``reset_index``.  Do not alter this routine in place; introduce a new
-    algorithm identifier if the protocol ever changes.
+    Only the cached train_val frame is partitioned. This is not silently labeled
+    as pytdc's default split: the cached protocol is an explicit 7:1 split with
+    classification stratification and task-seed random state.
     """
     from sklearn.model_selection import train_test_split
 

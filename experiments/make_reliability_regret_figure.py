@@ -761,7 +761,13 @@ def build_svg(
     return "\n".join(lines) + "\n"
 
 
-def locate_chrome(explicit: str | None = None) -> Path:
+def locate_renderer(explicit: str | None = None) -> Path:
+    """Locate a browser renderer, with ImageMagick as a headless fallback.
+
+    The analysis runner may be on a compute node without Chrome/Chromium.  The
+    SVG is self-contained, so ImageMagick can still produce the required raster
+    and PDF artifacts without changing the figure source or analysis tables.
+    """
     candidates = [
         explicit,
         os.environ.get("CHROME_BIN"),
@@ -773,12 +779,36 @@ def locate_chrome(explicit: str | None = None) -> Path:
     for candidate in candidates:
         if candidate and Path(candidate).exists():
             return Path(candidate)
+    imagemagick = shutil.which("magick") or shutil.which("convert")
+    if imagemagick:
+        return Path(imagemagick)
     raise FileNotFoundError(
-        "Chrome/Chromium is required to render PNG/PDF. Set CHROME_BIN or pass --chrome."
+        "Chrome/Chromium or ImageMagick is required to render PNG/PDF. "
+        "Set CHROME_BIN or pass --chrome."
     )
 
 
 def render_svg(svg_path: Path, png_path: Path, pdf_path: Path, chrome: Path) -> None:
+    if chrome.name in {"convert", "magick"}:
+        # ImageMagick reads the SVG's explicit width/height.  Density is set so
+        # the PNG has the same 300-dpi physical size as the browser path.
+        common = [str(chrome), "-background", "white", "-density", str(DPI)]
+        subprocess.run(
+            [*common, str(svg_path), "-alpha", "remove", "-alpha", "off", str(png_path)],
+            check=True,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.PIPE,
+            text=True,
+        )
+        subprocess.run(
+            [*common, str(svg_path), "-alpha", "remove", "-alpha", "off", str(pdf_path)],
+            check=True,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.PIPE,
+            text=True,
+        )
+        return
+
     svg = svg_path.read_text(encoding="utf-8")
     wrapper = (
         "<!doctype html><html><head><meta charset=\"utf-8\">"
@@ -1015,7 +1045,7 @@ def main() -> None:
     svg_path.write_text(svg, encoding="utf-8")
     source_grid.to_csv(source_path, index=False)
     summary.to_csv(dimension_path, index=False)
-    render_svg(svg_path, png_path, pdf_path, locate_chrome(args.chrome))
+    render_svg(svg_path, png_path, pdf_path, locate_renderer(args.chrome))
     manifest_path = write_manifest(
         output_dir,
         result_dir,

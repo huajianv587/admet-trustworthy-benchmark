@@ -2,8 +2,8 @@
 
 This repository supports the study:
 
-> **Reliability Regret after Single-Metric Random-Resplit Validation Selection:
-> A 22-Endpoint Audit on Scaffold-Disjoint TDC ADMET Tests**
+> **A Retrospective Reliability-Regret Audit for QSAR-Oriented ADMET Model Selection:
+> A 22-Endpoint TDC Benchmark Study**
 
 The study asks a practical model-selection question: after an ADMET model is
 chosen using one predictive random-resplit validation metric, what
@@ -23,13 +23,14 @@ claim.
 - five seeds per endpoint and model
 - 550/550 completed primary runs
 - 120/120 paired cleaned-data sensitivity runs
-- scaffold-disjoint test evaluation with explicit source and split hashes
+- fixed cached test partitions with explicit sample-identity and split hashes; scaffold-disjoint provenance is not established for this run
 
 The primary benchmark fixes each endpoint's model using mean designated
-validation performance before auditing held-out reliability. A zero-refit,
-500-repeat scaffold-group cross-fit then probes the sensitivity of the
-dimension-specific candidate-pool comparison without changing any trained
-prediction.
+validation performance before auditing held-out reliability. The test-set
+minimum is retained as a retrospective candidate-pool reference and is not a
+deployable selector. The current analysis also retains separate post-hoc
+selected-model and cleaning sensitivities; these do not establish external or
+temporal validity.
 
 ## Selected-model zero-refit sensitivities
 
@@ -43,8 +44,9 @@ benchmark but different from and generally weaker than ensemble uncertainty;
 their combination was not tested.
 
 For the 13 selected classification models, validation-fitted isotonic mapping
-improved ten-bin ECE on 9/13 endpoint means but Brier score on 7/13; the mean
-Brier-gain interval crossed zero. These mappings reused validation labels that
+improved ten-bin ECE on 11/13 endpoint means but Brier score on 8/13; the mean
+Brier-gain interval crossed zero. The all-candidate-model-averaged Figure 4
+summary is a separate 13/13 ECE and 6/13 Brier estimand. These mappings reused validation labels that
 had informed checkpointing and model selection, so they do not represent an
 independent calibration cohort. Both analyses are post-hoc descriptive
 sensitivities and establish neither external nor prospective validity.
@@ -64,7 +66,10 @@ It deliberately excludes:
 The released prediction views therefore support sample-identity alignment and
 output audits but cannot alone reproduce label-dependent metrics. Exact replay
 requires obtaining the matching TDC ADMET data under its original terms and
-following [`docs/MAIN_DATA_PROTOCOL.md`](docs/MAIN_DATA_PROTOCOL.md).
+following [`docs/MAIN_DATA_PROTOCOL.md`](docs/MAIN_DATA_PROTOCOL.md). The
+public package is traceable and conditionally replayable; it is not a
+standalone exact-reproduction bundle because raw TDC data, checkpoints and the
+complete formal remote traditional-CPU environment are not released.
 
 ## Environment
 
@@ -168,3 +173,26 @@ browsable source repository is
 
 This software and its outputs are research artifacts. They are not clinical,
 regulatory, or stand-alone compound-safety tools.
+
+
+## Current candidate update 2026 10 27
+
+The canonical manuscript is `docs/MANUSCRIPT_MASTER_20261024.md`, revised
+on 2026-10-26. Current readiness and limits are in
+`docs/SUBMISSION_STATUS_20261026.md`. Formal prediction recomputation and the
+post hoc identity-unit sensitivity are in
+`results/identity_unit_sensitivity_20261026/`. All 550 formal runs are locally
+accessible; the separate Mac replay is not substituted. A complete training
+environment replay and independent external validation are not established.
+
+The correct validation-selected RRP winner agreement counts are 3/13 ECE,
+6/13 Brier, 2/9 coverage, 5/22 relative excess AURC and 3/22 support alignment.
+Older test-performance-winner counts refer to a different estimand. Repeated
+identity sensitivities retain reliability gaps while changing some endpoint
+counts. The support cutoff selective-gain contrast remains exploratory and
+numerically order-sensitive. The manuscript remains on scientific, disclosure
+and venue hold; local tests and file packaging do not establish Q2 readiness.
+Published v1.0.0 metadata describe the historical core release. The Git
+repository update dated 2026-10-27 contains current source corrections and
+audit code, but it does not by itself update the Zenodo v1.0.0 DOI or certify a
+new archived release.

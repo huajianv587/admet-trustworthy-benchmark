@@ -14,8 +14,9 @@ authors:
 abstract: >-
   Reproducible code, configurations, de-identified prediction views, and
   audit outputs for a 22-endpoint, five-model, five-seed study of reliability
-  after random-resplit validation-only ADMET model selection under scaffold
-  shift. The release includes dimension-specific candidate-pool comparisons
+  after random-resplit validation-only ADMET model selection on fixed TDC
+  held-out test partitions. The release includes dimension-specific
+  candidate-pool comparisons
   and zero-refit selected-model analyses of Morgan-support risk--coverage and
   validation-fitted calibration. Selected-model Morgan-support ordering was
   favorable versus random on 20 of 22 endpoints but generally weaker than

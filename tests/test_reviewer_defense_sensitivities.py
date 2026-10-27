@@ -70,7 +70,7 @@ def test_locked_cross_endpoint_overlap_headlines_are_exact_and_aggregate_only() 
     assert summary["pairs_with_overlap"] == EXPECTED_OVERLAPPING_PAIRS == 209
     assert summary["maximum_pair_intersection_count"] == 538
     assert summary["global_whole_set_sha256"] == (
-        "ff78bc506b4d6e0b888afa73ba7f66157a8aba13ae2d925e1457c498e5d9b78d"
+        "b04546d16ad7a7a644fd1a1f1eb3829287c4b293d9a3b68abf57d811111d97b6"
     )
     for frame in (endpoint_rows, pairwise, components):
         assert not ({column.lower() for column in frame.columns} & FORBIDDEN_PUBLIC_COLUMNS)

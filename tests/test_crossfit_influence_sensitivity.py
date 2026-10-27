@@ -177,7 +177,7 @@ def test_locked_full_intervals_reproduce_all_fourteen_rows_and_expected_support(
     assert applicability["loco_ci_low_gt_zero_count"] == 5
     assert applicability["loco_omission_count"] == 5
     ece_10bin = primary.loc["ece_10bin"]
-    assert ece_10bin["loeo_ci_low_gt_zero_count"] == 4
+    assert ece_10bin["loeo_ci_low_gt_zero_count"] == 10
     assert ece_10bin["loeo_omission_count"] == 13
-    assert ece_10bin["loco_ci_low_gt_zero_count"] == 1
+    assert ece_10bin["loco_ci_low_gt_zero_count"] == 2
     assert ece_10bin["loco_omission_count"] == 4

@@ -2,8 +2,7 @@ from __future__ import annotations
 
 import argparse
 import csv
-import hashlib
-import json
+import glob
 import sys
 from pathlib import Path
 
@@ -14,13 +13,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
 from admet_benchmark.applicability import compute_max_similarities
-from admet_benchmark.data_loader import (
-    PYTDC_SPLIT_SOURCE,
-    SPLIT_SOURCE_CHOICES,
-    TDC_TASKS,
-    extract_xy,
-    load_tdc_official,
-)
+from admet_benchmark.data_loader import TDC_TASKS, extract_xy, load_tdc_official
 from admet_benchmark.metrics import classification_metrics, regression_metrics
 
 
@@ -37,19 +30,6 @@ FIELDS = [
     "metric",
     "mean_abs_error",
 ]
-SIMILARITY_CACHE_SCHEMA = "applicability_similarity_v2"
-
-
-def smiles_sha256(smiles: list[str]) -> str:
-    digest = hashlib.sha256()
-    for index, value in enumerate(smiles):
-        digest.update(
-            json.dumps(
-                [index, str(value)], separators=(",", ":"), ensure_ascii=False
-            ).encode("utf-8")
-        )
-        digest.update(b"\n")
-    return digest.hexdigest()
 
 
 def metric_value(task_type: str, official_metric: str, y_true, y_pred) -> float:
@@ -60,63 +40,29 @@ def metric_value(task_type: str, official_metric: str, y_true, y_pred) -> float:
     return regression_metrics(y_true, y_pred)[official_metric]
 
 
-def similarity_cache_path(
-    cache_dir: Path, task: str, seed: int, split_source: str
-) -> Path:
-    return cache_dir / f"{task.lower()}_seed{seed}_{split_source}_test_similarity.csv"
+def similarity_cache_path(cache_dir: Path, task: str, seed: int) -> Path:
+    return cache_dir / f"{task.lower()}_seed{seed}_test_similarity.csv"
 
 
-def load_or_compute_similarity(
-    task: str,
-    seed: int,
-    data_dir: str,
-    cache_dir: Path,
-    split_source: str = PYTDC_SPLIT_SOURCE,
-) -> pd.DataFrame:
-    path = similarity_cache_path(cache_dir, task, seed, split_source)
-    split = load_tdc_official(
-        task, data_dir=data_dir, seed=seed, split_source=split_source
-    )
+def load_or_compute_similarity(task: str, seed: int, data_dir: str, cache_dir: Path) -> pd.DataFrame:
+    path = similarity_cache_path(cache_dir, task, seed)
+    if path.exists():
+        return pd.read_csv(path)
+    split = load_tdc_official(task, data_dir=data_dir, seed=seed)
     train_smiles, _ = extract_xy(split.train)
     test_smiles, _ = extract_xy(split.test)
-    train_hash = smiles_sha256(train_smiles)
-    test_hash = smiles_sha256(test_smiles)
-    if path.exists():
-        cached = pd.read_csv(path)
-        provenance_ok = bool(
-            not cached.empty
-            and {
-                "cache_schema",
-                "split_source",
-                "train_smiles_sha256",
-                "test_smiles_sha256",
-            }.issubset(cached.columns)
-            and set(cached["cache_schema"].astype(str)) == {SIMILARITY_CACHE_SCHEMA}
-            and set(cached["split_source"].astype(str)) == {split_source}
-            and set(cached["train_smiles_sha256"].astype(str)) == {train_hash}
-            and set(cached["test_smiles_sha256"].astype(str)) == {test_hash}
-            and len(cached) == len(test_smiles)
-        )
-        if provenance_ok:
-            return cached
     sims = compute_max_similarities(test_smiles, train_smiles)
     out = pd.DataFrame(
         {
             "task": split.name,
             "seed": seed,
-            "cache_schema": SIMILARITY_CACHE_SCHEMA,
-            "split_source": split_source,
-            "train_smiles_sha256": train_hash,
-            "test_smiles_sha256": test_hash,
             "sample_index": np.arange(len(test_smiles)),
             "smiles": test_smiles,
             "max_tanimoto": sims,
         }
     )
     path.parent.mkdir(parents=True, exist_ok=True)
-    temporary = path.with_suffix(path.suffix + ".tmp")
-    out.to_csv(temporary, index=False)
-    temporary.replace(path)
+    out.to_csv(path, index=False)
     return out
 
 
@@ -126,24 +72,12 @@ def main() -> None:
     parser.add_argument("--seeds", nargs="*", type=int, default=[1])
     parser.add_argument("--pred-dir", default=str(ROOT / "results" / "predictions" / "traditional_local_prelim"))
     parser.add_argument("--data-dir", default=str(ROOT / "data" / "tdc_official"))
-    parser.add_argument(
-        "--split-source",
-        choices=SPLIT_SOURCE_CHOICES,
-        default=PYTDC_SPLIT_SOURCE,
-        help="Explicit split protocol; pass locked_cache for formal five-model analysis.",
-    )
     parser.add_argument("--cache-dir", default=str(ROOT / "results" / "cache" / "applicability"))
     parser.add_argument("--out", default=str(ROOT / "results" / "tables" / "applicability_domain_local_prelim.csv"))
     parser.add_argument("--bins", nargs="*", type=float, default=[0.0, 0.3, 0.5, 0.7, 0.9, 1.0])
     args = parser.parse_args()
 
-    pred_files = sorted(
-        path
-        for path in Path(args.pred_dir).rglob("*.csv")
-        if not path.name.startswith(".")
-    )
-    if not pred_files:
-        raise FileNotFoundError(f"No prediction CSV files found under {args.pred_dir}")
+    pred_files = [Path(p) for p in glob.glob(str(Path(args.pred_dir) / "*" / "*.csv"))]
     predictions = pd.concat([pd.read_csv(path) for path in pred_files], ignore_index=True)
     predictions = predictions[predictions["split"] == "test"].copy()
     rows: list[dict] = []
@@ -152,9 +86,7 @@ def main() -> None:
     for task in args.tasks:
         for seed in args.seeds:
             print(f"similarity: task={task} seed={seed}", flush=True)
-            sims = load_or_compute_similarity(
-                task, seed, args.data_dir, cache_dir, args.split_source
-            )
+            sims = load_or_compute_similarity(task, seed, args.data_dir, cache_dir)
             task_key = sims["task"].iloc[0]
             subset = predictions[(predictions["task"] == task_key) & (predictions["seed"] == seed)].copy()
             if subset.empty:

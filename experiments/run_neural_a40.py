@@ -18,9 +18,7 @@ import argparse
 import json
 import logging
 import os
-import shutil
 import sys
-import tempfile
 import time
 from pathlib import Path
 from datetime import datetime
@@ -38,12 +36,7 @@ from scipy.stats import spearmanr
 # Add src to path
 sys.path.insert(0, str(Path(__file__).parent.parent / 'src'))
 
-from admet_benchmark.data_loader import (
-    LOCKED_CACHE_SPLIT_ALGORITHM,
-    LOCKED_CACHE_SPLIT_SOURCE,
-    SPLIT_SOURCE_CHOICES,
-    load_tdc_official,
-)
+from admet_benchmark.data_loader import load_tdc_official
 from admet_benchmark.neural_models import GINModel, DMPNNModel, MolecularGraphFeaturizer, collate_graphs
 from admet_benchmark.utils import set_seed
 
@@ -54,28 +47,6 @@ logging.basicConfig(
     datefmt='%Y-%m-%d %H:%M:%S'
 )
 logger = logging.getLogger(__name__)
-
-
-def publish_checkpoint(local_path, destination, attempts=5):
-    """Copy a completed checkpoint to shared storage with atomic replacement."""
-    destination = Path(destination)
-    destination.parent.mkdir(parents=True, exist_ok=True)
-    staged = destination.with_suffix(destination.suffix + f".tmp.{os.getpid()}")
-    last_error = None
-    for attempt in range(1, attempts + 1):
-        try:
-            shutil.copyfile(local_path, staged)
-            os.replace(staged, destination)
-            return
-        except OSError as exc:
-            last_error = exc
-            staged.unlink(missing_ok=True)
-            logger.warning(
-                "Checkpoint publish attempt %d/%d failed for %s: %s",
-                attempt, attempts, destination, exc,
-            )
-            time.sleep(min(2 ** attempt, 20))
-    raise RuntimeError(f"Could not publish checkpoint {destination}: {last_error}")
 
 
 def split_to_frames(data):
@@ -98,35 +69,18 @@ class MolecularGraphDataset(Dataset):
         self.smiles_list = smiles_list
         self.labels = labels
         self.featurizer = featurizer
-        # RDKit graph construction is CPU-heavy.  Building graphs in
-        # ``__getitem__`` repeated the same work on every epoch and caused the
-        # 12 concurrent A40 workers to contend for the 10 allocated CPUs.
-        # Cache each molecule once; this changes no features or model inputs.
-        self.graphs = [
-            self.featurizer.smiles_to_graph(smiles) for smiles in self.smiles_list
-        ]
-        invalid = [index for index, graph in enumerate(self.graphs) if graph is None]
-        if invalid:
-            preview = ", ".join(
-                f"{index}:{self.smiles_list[index]}" for index in invalid[:5]
-            )
-            raise ValueError(
-                "Unparseable SMILES remain after the locked compatibility policy "
-                f"at {preview}"
-            )
 
     def __len__(self):
         return len(self.smiles_list)
 
     def __getitem__(self, idx):
+        smiles = self.smiles_list[idx]
         label = self.labels[idx]
-        graph = self.graphs[idx]
+
+        graph = self.featurizer.smiles_to_graph(smiles)
         if graph is None:
             return None
 
-        # PyG batching mutates bookkeeping attributes, so return a shallow
-        # clone rather than the cached object itself.
-        graph = graph.clone()
         graph.y = torch.tensor([label], dtype=torch.float32)
         return graph
 
@@ -216,27 +170,7 @@ def metric_higher_is_better(task_type, metric_name):
     return metric_name == "spearman"
 
 
-def completed_for_split_source(metrics_path, split_source):
-    """Treat pre-provenance artifacts as locked_cache, never as pytdc."""
-    try:
-        payload = json.loads(Path(metrics_path).read_text())
-    except (OSError, json.JSONDecodeError):
-        return False
-    recorded = payload.get("split_source", LOCKED_CACHE_SPLIT_SOURCE)
-    return recorded == split_source
-
-
-def train_single_run(
-    task_name,
-    model_name,
-    seed,
-    output_dir,
-    device_id=0,
-    max_epochs=100,
-    patience=20,
-    data_dir="data/tdc_official",
-    split_source=LOCKED_CACHE_SPLIT_SOURCE,
-):
+def train_single_run(task_name, model_name, seed, output_dir, device_id=0, max_epochs=100, patience=20):
     """Train a single task-model-seed combination."""
 
     # Setup device
@@ -245,26 +179,14 @@ def train_single_run(
     # Setup paths
     run_id = f"{task_name}_{model_name}_seed{seed}"
     checkpoint_path = output_dir / 'checkpoints' / f"{run_id}.pt"
-    resume_checkpoint_path = output_dir / 'resume' / f"{run_id}.pt"
     prediction_path = output_dir / 'predictions' / f"{run_id}.csv"
     metrics_path = output_dir / 'metrics' / f"{run_id}.json"
     log_path = output_dir / 'logs' / f"{run_id}.log"
 
     # Check if already completed
-    if (
-        checkpoint_path.exists()
-        and prediction_path.exists()
-        and metrics_path.exists()
-        and completed_for_split_source(metrics_path, split_source)
-    ):
+    if checkpoint_path.exists() and prediction_path.exists() and metrics_path.exists():
         logger.info(f"SKIP {run_id}: already completed")
         return {'status': 'skipped', 'run_id': run_id}
-
-    # A checkpoint without both companion artifacts is an interrupted or
-    # corrupt partial run, not a resumable completion marker.
-    if checkpoint_path.exists():
-        checkpoint_path.unlink()
-    resume_checkpoint_path.parent.mkdir(parents=True, exist_ok=True)
 
     # Setup file logging
     file_handler = logging.FileHandler(log_path)
@@ -275,25 +197,17 @@ def train_single_run(
         logger.info(f"START {run_id}")
         start_time = time.time()
 
-        # Training checkpoints are updated many times.  Writing every update
-        # directly to the shared NFS caused concurrent PytorchStreamWriter
-        # failures.  Keep the working checkpoint on node-local storage and
-        # publish the final best state once, atomically, with retries.
-        local_checkpoint_dir = Path(
-            tempfile.gettempdir()
-        ) / f"admet_checkpoints_{os.environ.get('SLURM_JOB_ID', 'local')}"
-        local_checkpoint_dir.mkdir(parents=True, exist_ok=True)
-        working_checkpoint_path = local_checkpoint_dir / f"{run_id}.pt"
-
         # Set seed
         set_seed(seed)
 
         # Load data
+        # The formal A40 artifacts use the portable locked-cache protocol.
+        # Pass it explicitly so a fresh run cannot silently fall back to the
+        # PyTDC default split and become incomparable with the retained ledger.
         data = load_tdc_official(
             task_name,
-            data_dir=data_dir,
             seed=seed,
-            split_source=split_source,
+            split_source="locked_cache",
         )
         train_frame, valid_frame, test_frame, task_type, metric_name = split_to_frames(data)
 
@@ -349,49 +263,8 @@ def train_single_run(
         best_valid_metric = float('-inf') if higher_is_better else float('inf')
         best_epoch = 0
         patience_counter = 0
-        start_epoch = 0
-        best_model_state = None
 
-        # Resume an interrupted Slurm wave from its latest durable epoch.
-        if resume_checkpoint_path.exists():
-            try:
-                resume_state = torch.load(
-                    resume_checkpoint_path, map_location=device, weights_only=False
-                )
-                recorded_split_source = resume_state.get(
-                    'split_source', LOCKED_CACHE_SPLIT_SOURCE
-                )
-                if recorded_split_source != split_source:
-                    raise ValueError(
-                        "resume checkpoint split_source mismatch: "
-                        f"{recorded_split_source} != {split_source}"
-                    )
-                model.load_state_dict(resume_state['model_state_dict'])
-                optimizer.load_state_dict(resume_state['optimizer_state_dict'])
-                if resume_state.get('scheduler_state_dict'):
-                    scheduler.load_state_dict(resume_state['scheduler_state_dict'])
-                start_epoch = int(resume_state['epoch']) + 1
-                best_epoch = int(resume_state.get('best_epoch', resume_state['epoch']))
-                best_valid_metric = float(resume_state['best_valid_metric'])
-                patience_counter = int(resume_state.get('patience_counter', 0))
-                best_model_state = resume_state.get(
-                    'best_model_state_dict', resume_state['model_state_dict']
-                )
-                shutil.copyfile(resume_checkpoint_path, working_checkpoint_path)
-                logger.info(
-                    "RESUME %s from epoch %d (best epoch %d, patience %d)",
-                    run_id, start_epoch, best_epoch, patience_counter,
-                )
-            except Exception as exc:
-                logger.warning("Ignoring unreadable resume checkpoint %s: %s", run_id, exc)
-                resume_checkpoint_path.unlink(missing_ok=True)
-                start_epoch = 0
-                best_valid_metric = float('-inf') if higher_is_better else float('inf')
-                best_epoch = 0
-                patience_counter = 0
-                best_model_state = None
-
-        for epoch in range(start_epoch, max_epochs):
+        for epoch in range(max_epochs):
             # Train
             train_loss = train_epoch(model, train_loader, optimizer, criterion, device)
 
@@ -408,30 +281,15 @@ def train_single_run(
                 best_valid_metric = float(valid_metric)
                 best_epoch = epoch
                 patience_counter = 0
-                best_model_state = {
-                    key: value.detach().cpu().clone()
-                    for key, value in model.state_dict().items()
-                }
+                # Save checkpoint
+                torch.save({
+                    'epoch': epoch,
+                    'model_state_dict': model.state_dict(),
+                    'optimizer_state_dict': optimizer.state_dict(),
+                    'best_valid_metric': best_valid_metric,
+                }, checkpoint_path)
             else:
                 patience_counter += 1
-
-            # Save current optimizer/model state locally every epoch. Every two
-            # epochs publish an atomic durable copy so the next 12h wave can
-            # continue instead of restarting at epoch zero.
-            progress_state = {
-                'epoch': epoch,
-                'split_source': split_source,
-                'model_state_dict': model.state_dict(),
-                'optimizer_state_dict': optimizer.state_dict(),
-                'scheduler_state_dict': scheduler.state_dict(),
-                'best_model_state_dict': best_model_state,
-                'best_valid_metric': best_valid_metric,
-                'best_epoch': best_epoch,
-                'patience_counter': patience_counter,
-            }
-            torch.save(progress_state, working_checkpoint_path)
-            if epoch % 2 == 0:
-                publish_checkpoint(working_checkpoint_path, resume_checkpoint_path)
 
             if epoch % 10 == 0:
                 logger.info(f"Epoch {epoch}: train_loss={train_loss:.4f}, valid_{metric_name}={valid_metric:.4f}, best={best_valid_metric:.4f}")
@@ -441,12 +299,9 @@ def train_single_run(
                 logger.info(f"Early stopping at epoch {epoch}")
                 break
 
-        # Persist the last epoch before final evaluation, then restore the best
-        # validation state for the locked prediction artifacts.
-        publish_checkpoint(working_checkpoint_path, resume_checkpoint_path)
-        if best_model_state is None:
-            raise RuntimeError(f"No valid model state produced for {run_id}")
-        model.load_state_dict(best_model_state)
+        # Load best model
+        checkpoint = torch.load(checkpoint_path, map_location=device, weights_only=False)
+        model.load_state_dict(checkpoint['model_state_dict'])
 
         # Final evaluation
         valid_preds, valid_labels = evaluate(model, valid_loader, task_type, device)
@@ -464,18 +319,11 @@ def train_single_run(
         })
         predictions_df.to_csv(prediction_path, index=False)
 
-        # Publish the model before writing metrics.  The metrics file is the
-        # final completion marker used by the resume scanner.
+        # Save metrics
         metrics = {
             'task': task_name,
             'model': model_name,
             'seed': seed,
-            'split_source': split_source,
-            'split_algorithm': (
-                LOCKED_CACHE_SPLIT_ALGORITHM
-                if split_source == LOCKED_CACHE_SPLIT_SOURCE
-                else 'pytdc_default_task_specific_runtime'
-            ),
             'task_type': task_type,
             'metric_name': metric_name,
             'best_epoch': best_epoch,
@@ -484,19 +332,8 @@ def train_single_run(
             'train_time_seconds': time.time() - start_time
         }
 
-        final_checkpoint_path = local_checkpoint_dir / f"{run_id}.final.pt"
-        torch.save({
-            'epoch': best_epoch,
-            'model_state_dict': best_model_state,
-            'best_valid_metric': best_valid_metric,
-        }, final_checkpoint_path)
-        publish_checkpoint(final_checkpoint_path, checkpoint_path)
-        final_checkpoint_path.unlink(missing_ok=True)
-        working_checkpoint_path.unlink(missing_ok=True)
-
         with open(metrics_path, 'w') as f:
             json.dump(metrics, f, indent=2)
-        resume_checkpoint_path.unlink(missing_ok=True)
 
         logger.info(f"COMPLETE {run_id}: valid_{metric_name}={valid_metric:.4f}, test_{metric_name}={test_metric:.4f}")
         logger.removeHandler(file_handler)
@@ -519,11 +356,6 @@ def main():
                        help='Random seeds')
     parser.add_argument('--output-dir', type=str, default='results/neural',
                        help='Output directory')
-    parser.add_argument('--data-dir', type=str, default='data/tdc_official',
-                       help='TDC cache root')
-    parser.add_argument('--split-source', choices=SPLIT_SOURCE_CHOICES,
-                       default=LOCKED_CACHE_SPLIT_SOURCE,
-                       help='Explicit split protocol; formal runs use locked_cache')
     parser.add_argument('--max-parallel', type=int, default=4,
                        help='Maximum parallel runs')
     parser.add_argument('--resume', action='store_true',
@@ -578,15 +410,7 @@ def main():
     results = []
     for i, (task, model, seed) in enumerate(run_queue):
         logger.info(f"Progress: {i+1}/{len(run_queue)}")
-        result = train_single_run(
-            task,
-            model,
-            seed,
-            output_dir,
-            device_id=0,
-            data_dir=args.data_dir,
-            split_source=args.split_source,
-        )
+        result = train_single_run(task, model, seed, output_dir, device_id=0)
         results.append(result)
 
     # Summary

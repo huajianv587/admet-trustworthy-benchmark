@@ -1837,7 +1837,11 @@ def main() -> None:
         random_seed=args.random_seed,
     )
 
-    out_dir = Path(args.out_dir)
+    # Normalize the output directory before writing manifests.  Callers often
+    # provide a repository-relative path, while the manifest records paths
+    # relative to ROOT; mixing the two makes pathlib.relative_to fail after the
+    # expensive cross-fit computation has already completed.
+    out_dir = Path(args.out_dir).expanduser().resolve()
     out_dir.mkdir(parents=True, exist_ok=True)
     outputs: dict[str, pd.DataFrame] = {
         "crossfit_oracle_fold_level.csv": fold_rows,

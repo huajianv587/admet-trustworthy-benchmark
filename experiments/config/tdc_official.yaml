@@ -1,7 +1,7 @@
 project:
   title: "Benchmarking Trustworthy ADMET Prediction under Scaffold Shift"
   main_split: "tdc_official"
-  target_scope: "SCIE_JCR_Q3"
+  target_scope: "SCIE_CAS_MAJOR_Q2_PRIORITY_JCR_Q2_FALLBACK"
 
 seeds: [1, 2, 3, 4, 5]
 
@@ -9,11 +9,7 @@ data:
   path: "data/tdc_official"
   split_source: "locked_cache"
   split_algorithm: "sklearn_train_test_split_test_size_0.125_random_state_task_seed_classification_stratified_v1"
-  split_source_note: >-
-    Explicit portable protocol used by all five formal model families; never
-    selected implicitly from pytdc availability.
-  preserve_official_test: true
-  preserve_cached_train_val_membership_before_locked_resplit: true
+  preserve_official_split: true
   smiles_column: "Drug"
   label_column: "Y"
 
@@ -52,10 +48,8 @@ models:
     - xgboost
     - lightgbm
   gnn:
+    - dmpnn
     - gin
-    - chemprop_dmpnn
-  excluded_legacy:
-    - legacy_node_mpnn
 
 evaluation:
   classification:

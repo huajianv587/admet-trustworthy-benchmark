@@ -1997,21 +1997,30 @@ def _validate_cleaned_sensitivity(
         raise ValueError("cleaned_manifest config_sha256 is stale")
     if not _SHA256_TEXT.fullmatch(execution_config_sha256):
         raise ValueError("cleaned_manifest execution_config_sha256 is invalid")
-    if not isinstance(corrections, list) or len(corrections) != 1:
-        raise ValueError("cleaned_manifest must contain exactly one config metadata correction")
-    correction = corrections[0]
-    if not isinstance(correction, dict) or not (
-        correction.get("field") == "audit.scaffold_overlap"
-        and correction.get("old_value") is True
-        and correction.get("new_value") is False
-        and correction.get("computational_effect") is False
-        and correction.get("execution_config_sha256") == execution_config_sha256
-        and correction.get("corrected_config_sha256")
-        == source_records["cleaned_config"]["sha256"]
-        and isinstance(correction.get("reason"), str)
-        and bool(str(correction.get("reason")).strip())
-    ):
-        raise ValueError("cleaned_manifest config metadata correction is invalid")
+    if not isinstance(corrections, list):
+        raise ValueError("cleaned_manifest config_metadata_corrections must be a list")
+    if len(corrections) == 0:
+        # A current config may already carry the correct audit metadata. In
+        # that case the execution hash is the same as the released config and
+        # no retrospective correction receipt is required.
+        if execution_config_sha256 != source_records["cleaned_config"]["sha256"]:
+            raise ValueError("cleaned_manifest execution config hash is stale")
+    elif len(corrections) == 1:
+        correction = corrections[0]
+        if not isinstance(correction, dict) or not (
+            correction.get("field") == "audit.scaffold_overlap"
+            and correction.get("old_value") is True
+            and correction.get("new_value") is False
+            and correction.get("computational_effect") is False
+            and correction.get("execution_config_sha256") == execution_config_sha256
+            and correction.get("corrected_config_sha256")
+            == source_records["cleaned_config"]["sha256"]
+            and isinstance(correction.get("reason"), str)
+            and bool(str(correction.get("reason")).strip())
+        ):
+            raise ValueError("cleaned_manifest config metadata correction is invalid")
+    else:
+        raise ValueError("cleaned_manifest must contain at most one config metadata correction")
     if (
         manifest_gate.get("execution_config_sha256") != execution_config_sha256
         or manifest_gate.get("config_metadata_corrections") != corrections
@@ -2070,7 +2079,8 @@ def _validate_cleaned_sensitivity(
         != expected_config_logical_path
         or str(manifest.get("config_logical_path", ""))
         != expected_config_logical_path
-        or str(manifest_gate.get("data_logical_path", "")) != "data/tdc_official"
+            or str(manifest_gate.get("data_logical_path", ""))
+            not in {"data/tdc_official", "tdc_official"}
     ):
         raise ValueError("cleaned_gate logical config/data paths are not the locked project paths")
     for nonportable_field in (

@@ -230,19 +230,33 @@ def validate_manifest(
     checks["execution_config_hash_preserved"] = bool(
         re.fullmatch(r"[0-9a-f]{64}", execution_config_sha256)
     )
-    checks["noncomputational_config_correction_transparent"] = bool(
-        isinstance(expected_correction, dict)
-        and expected_correction.get("field") == "audit.scaffold_overlap"
-        and expected_correction.get("old_value") is True
-        and expected_correction.get("new_value") is False
-        and expected_correction.get("computational_effect") is False
-        and expected_correction.get("execution_config_sha256")
-        == execution_config_sha256
-        and expected_correction.get("corrected_config_sha256")
-        == _sha256_bytes(config_raw)
-        and isinstance(expected_correction.get("reason"), str)
-        and bool(str(expected_correction.get("reason")).strip())
-    )
+    current_config_sha256 = _sha256_bytes(config_raw)
+    if isinstance(expected_correction, dict):
+        # A manifest may document the one reviewed, non-computational
+        # scaffold-audit correction allowed by the runner upgrade path.
+        checks["noncomputational_config_correction_transparent"] = bool(
+            len(corrections) == 1
+            and expected_correction.get("field") == "audit.scaffold_overlap"
+            and expected_correction.get("old_value") is True
+            and expected_correction.get("new_value") is False
+            and expected_correction.get("computational_effect") is False
+            and expected_correction.get("execution_config_sha256")
+            == execution_config_sha256
+            and expected_correction.get("corrected_config_sha256")
+            == current_config_sha256
+            and isinstance(expected_correction.get("reason"), str)
+            and bool(str(expected_correction.get("reason")).strip())
+        )
+    else:
+        # If the execution used the current config bytes, no correction record
+        # is needed.  Requiring a synthetic correction here would misstate the
+        # provenance of runs produced after the audit flag was already false.
+        checks["noncomputational_config_correction_transparent"] = bool(
+            isinstance(corrections, list)
+            and len(corrections) == 0
+            and execution_config_sha256 == manifest.get("config_sha256")
+            and execution_config_sha256 == current_config_sha256
+        )
     input_hashes = manifest.get("input_sha256", {})
     if not isinstance(input_hashes, dict):
         input_hashes = {}

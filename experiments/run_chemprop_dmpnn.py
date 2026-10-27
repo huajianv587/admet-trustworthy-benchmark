@@ -113,6 +113,8 @@ def ensure_output_dirs(output_dir: Path) -> None:
 def is_complete(
     metrics_path: Path,
     split_source: str = LOCKED_CACHE_SPLIT_SOURCE,
+    run_mode: str = "formal",
+    batch_size: int | None = None,
 ) -> bool:
     """Return true only for a parseable, explicit final completion marker."""
     if not metrics_path.exists():
@@ -128,6 +130,8 @@ def is_complete(
         payload.get("status") == "complete"
         and payload.get("model") == MODEL_ID
         and recorded_split_source == split_source
+        and payload.get("run_mode", "formal") == run_mode
+        and (batch_size is None or payload.get("batch_size", 64) == batch_size)
     )
 
 
@@ -211,24 +215,25 @@ def prepare_locked_data(
     combined_path: Path,
     valid_path: Path,
     test_path: Path,
+    include_test: bool = True,
 ) -> dict[str, Any]:
     """Write Chemprop inputs without changing official sample membership.
 
     Two legacy pyridine N-oxide strings in Solubility_AqSolDB are translated
-    to equivalent parser-compatible model inputs.  The exact translation,
-    split, and source index are recorded below; no row is removed or reordered.
+    to equivalent parser-compatible model inputs. Profile-only mode omits test
+    rows and identities entirely; formal mode preserves every split row.
     """
     train = _frame_for_split(split.train, "train")
     valid = _frame_for_split(split.valid, "val")
-    test = _frame_for_split(split.test, "test")
-    combined = pd.concat([train, valid, test], ignore_index=True)
+    test = _frame_for_split(split.test, "test") if include_test else None
+    combined_frames = [train, valid] + ([test] if test is not None else [])
+    combined = pd.concat(combined_frames, ignore_index=True)
 
     repairs: list[dict[str, str | int]] = []
-    for split_name, source in (
-        ("train", split.train),
-        ("valid", split.valid),
-        ("test", split.test),
-    ):
+    source_splits = [("train", split.train), ("valid", split.valid)]
+    if include_test:
+        source_splits.append(("test", split.test))
+    for split_name, source in source_splits:
         source_smiles, _ = extract_xy(source)
         for sample_index, value in enumerate(source_smiles):
             record = representation_repair_record(
@@ -239,7 +244,8 @@ def prepare_locked_data(
 
     combined.to_csv(combined_path, index=False)
     valid[[SMILES_COLUMN]].to_csv(valid_path, index=False)
-    test[[SMILES_COLUMN]].to_csv(test_path, index=False)
+    if test is not None:
+        test[[SMILES_COLUMN]].to_csv(test_path, index=False)
 
     def frame_digest(frame: pd.DataFrame) -> str:
         material = frame[[SMILES_COLUMN, TARGET_COLUMN]].to_csv(index=False).encode("utf-8")
@@ -257,20 +263,20 @@ def prepare_locked_data(
 
     return {
         "source": "admet_benchmark.data_loader.load_tdc_official",
-        "official_test_preserved": True,
-        "official_split_membership_preserved": True,
+        "official_test_preserved": include_test,
+        "official_split_membership_preserved": include_test,
         "model_input_representation_policy": SMILES_COMPATIBILITY_POLICY,
         "model_input_repairs_n": len(repairs),
         "model_input_repairs": repairs,
         "train_n": int(len(train)),
         "valid_n": int(len(valid)),
-        "test_n": int(len(test)),
+        "test_n": int(len(test)) if test is not None else None,
         "train_sha256": frame_digest(train),
         "valid_sha256": frame_digest(valid),
-        "test_sha256": frame_digest(test),
+        "test_sha256": frame_digest(test) if test is not None else None,
         "source_train_sha256": source_frame_digest(split.train),
         "source_valid_sha256": source_frame_digest(split.valid),
-        "source_test_sha256": source_frame_digest(split.test),
+        "source_test_sha256": source_frame_digest(split.test) if include_test else None,
         "combined_csv_sha256": hashlib.sha256(combined_path.read_bytes()).hexdigest(),
     }
 
@@ -569,6 +575,7 @@ def train_single_run(
     split_override: OfficialSplit | None = None,
     loader: Callable[..., OfficialSplit] = load_tdc_official,
     split_source: str = LOCKED_CACHE_SPLIT_SOURCE,
+    profile_only: bool = False,
 ) -> dict[str, Any]:
     """Train one task/seed; write metrics last as the completion marker."""
     if task not in TDC_TASK_META and split_override is None:
@@ -576,7 +583,13 @@ def train_single_run(
     output_dir = Path(output_dir).resolve()
     ensure_output_dirs(output_dir)
     paths = artifact_paths(output_dir, task, seed)
-    if is_complete(paths["metrics"], split_source=split_source):
+    run_mode = "profile_only" if profile_only else "formal"
+    if is_complete(
+        paths["metrics"],
+        split_source=split_source,
+        run_mode=run_mode,
+        batch_size=batch_size,
+    ):
         return {"status": "skipped", "run_id": run_id(task, seed)}
 
     cp_bin = resolve_chemprop_bin(chemprop_bin)
@@ -616,7 +629,8 @@ def train_single_run(
         valid_raw = scratch / "valid_predictions_raw.csv"
         test_raw = scratch / "test_predictions_raw.csv"
         split_manifest = prepare_locked_data(
-            split, combined_path, valid_input, test_input
+            split, combined_path, valid_input, test_input,
+            include_test=not profile_only,
         )
         train_command = build_train_command(
             cp_bin,
@@ -659,6 +673,7 @@ def train_single_run(
                 "data_seed": int(seed),
                 "pytorch_seed": int(seed),
                 "accelerator": accelerator,
+                "run_mode": run_mode,
                 "trusted_self_generated_checkpoint_load": True,
             },
             "architecture": {
@@ -693,37 +708,45 @@ def train_single_run(
             num_workers,
             accelerator,
         )
-        test_command = build_predict_command(
-            cp_bin,
-            test_input,
-            model_source,
-            test_raw,
-            batch_size,
-            num_workers,
-            accelerator,
-        )
         config["commands"]["predict_valid"] = _command_text(valid_command)
-        config["commands"]["predict_test"] = _command_text(test_command)
         run_command(valid_command, paths["log"], env)
-        run_command(test_command, paths["log"], env)
+        if not profile_only:
+            test_command = build_predict_command(
+                cp_bin,
+                test_input,
+                model_source,
+                test_raw,
+                batch_size,
+                num_workers,
+                accelerator,
+            )
+            config["commands"]["predict_test"] = _command_text(test_command)
+            run_command(test_command, paths["log"], env)
 
         valid_predictions = _read_prediction_values(valid_raw, len(split.valid))
-        test_predictions = _read_prediction_values(test_raw, len(split.test))
         valid_labels = _labels(split.valid)
-        test_labels = _labels(split.test)
+        if profile_only:
+            test_predictions = np.array([], dtype=float)
+            test_labels = np.array([], dtype=float)
+            test_metric = None
+        else:
+            test_predictions = _read_prediction_values(test_raw, len(split.test))
+            test_labels = _labels(split.test)
+            test_metric = compute_official_metric(
+                test_labels, test_predictions, split.task_type, split.metric
+            )
         predictions = pd.DataFrame(
             {
-                "split": ["valid"] * len(split.valid) + ["test"] * len(split.test),
-                "smiles": _smiles(split.valid) + _smiles(split.test),
+                "split": ["valid"] * len(split.valid)
+                + ([] if profile_only else ["test"] * len(split.test)),
+                "smiles": _smiles(split.valid)
+                + ([] if profile_only else _smiles(split.test)),
                 "label": np.concatenate([valid_labels, test_labels]),
                 "prediction": np.concatenate([valid_predictions, test_predictions]),
             }
         )
         valid_metric = compute_official_metric(
             valid_labels, valid_predictions, split.task_type, split.metric
-        )
-        test_metric = compute_official_metric(
-            test_labels, test_predictions, split.task_type, split.metric
         )
         best_epoch = _best_epoch(train_output, policy)
 
@@ -732,6 +755,7 @@ def train_single_run(
         _atomic_copy(model_source, paths["checkpoint"])
         _atomic_csv(predictions, paths["prediction"])
         config["status"] = "complete"
+        config["run_mode"] = run_mode
         config["completed_at_utc"] = utc_now()
         config["best_epoch_zero_based"] = best_epoch
         _atomic_json(config, paths["config"])
@@ -742,6 +766,7 @@ def train_single_run(
             "model": MODEL_ID,
             "seed": int(seed),
             "split_source": split_source,
+            "run_mode": run_mode,
             "task_type": split.task_type,
             "metric_name": split.metric,
             "selection_metric": policy.public_name,
@@ -750,10 +775,12 @@ def train_single_run(
             "best_epoch": best_epoch,
             "valid_metric": valid_metric,
             "test_metric": test_metric,
+            "batch_size": int(batch_size),
+            "test_evaluated": not profile_only,
             "train_time_seconds": float(time.monotonic() - started),
             "chemprop_version": runtime["chemprop"],
             "prediction_rows": int(len(predictions)),
-            "official_test_preserved": True,
+            "official_test_preserved": not profile_only,
         }
         _atomic_json(metrics, paths["metrics"])
         return {
@@ -858,6 +885,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--batch-size", type=int, default=64)
     parser.add_argument("--num-workers", type=int, default=0)
     parser.add_argument(
+        "--profile-only",
+        action="store_true",
+        help="Train and validate without evaluating or exporting test predictions.",
+    )
+    parser.add_argument(
         "--smoke",
         action="store_true",
         help="Run a two-epoch isolated synthetic smoke test; no TDC result is written.",
@@ -896,6 +928,7 @@ def main() -> int:
                     patience=args.patience,
                     batch_size=args.batch_size,
                     num_workers=args.num_workers,
+                    profile_only=args.profile_only,
                 )
                 print(json.dumps(result, sort_keys=True))
             except Exception as exc:  # continue independent task/seed runs

@@ -21,8 +21,6 @@ from rdkit import Chem
 from rdkit.Chem import AllChem
 import numpy as np
 
-from .smiles_compat import model_input_smiles
-
 
 class MolecularGraphFeaturizer:
     """Convert SMILES to PyTorch Geometric graph data."""
@@ -33,9 +31,7 @@ class MolecularGraphFeaturizer:
 
     def smiles_to_graph(self, smiles):
         """Convert SMILES to PyG Data object."""
-        # Keep the official SMILES as the sample identity in prediction files,
-        # but repair two audited legacy N-oxide encodings for modern RDKit.
-        mol = Chem.MolFromSmiles(model_input_smiles(smiles))
+        mol = Chem.MolFromSmiles(smiles)
         if mol is None:
             return None
 

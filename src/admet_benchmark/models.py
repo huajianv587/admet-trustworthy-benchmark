@@ -41,9 +41,6 @@ def make_traditional_model(name: str, task_type: TaskType, seed: int = 42, n_job
             "n_estimators": 1000,
             "max_depth": 6,
             "learning_rate": 0.01,
-            # Historical locked configuration. LightGBM's default
-            # subsample_freq=0 disables row bagging even when subsample<1;
-            # retain the parameter exactly so released code matches all runs.
             "subsample": 0.8,
             "colsample_bytree": 0.8,
             "random_state": seed,

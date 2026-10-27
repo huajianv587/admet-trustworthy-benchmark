@@ -52,14 +52,22 @@ def _worker(payload: dict[str, Any]) -> dict[str, Any]:
 def completed_runs(
     output_dir: Path,
     split_source: str = LOCKED_CACHE_SPLIT_SOURCE,
+    run_mode: str = "formal",
+    batch_size: int | None = None,
 ) -> set[str]:
     complete: set[str] = set()
     metrics_dir = output_dir / "metrics"
     if not metrics_dir.exists():
         return complete
     for path in metrics_dir.glob(f"*_{MODEL_ID}_seed*.json"):
-        if is_complete(path, split_source=split_source):
-            complete.add(path.stem)
+        if not is_complete(
+            path,
+            split_source=split_source,
+            run_mode=run_mode,
+            batch_size=batch_size,
+        ):
+            continue
+        complete.add(path.stem)
     return complete
 
 
@@ -77,8 +85,15 @@ def build_queue(
     output_dir: Path,
     data_dir: Path,
     split_source: str = LOCKED_CACHE_SPLIT_SOURCE,
+    run_mode: str = "formal",
+    batch_size: int | None = None,
 ) -> list[tuple[str, int]]:
-    complete = completed_runs(output_dir, split_source=split_source)
+    complete = completed_runs(
+        output_dir,
+        split_source=split_source,
+        run_mode=run_mode,
+        batch_size=batch_size,
+    )
     queue = [
         (task, seed)
         for task in tasks
@@ -120,6 +135,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--time-budget-hours", type=float, default=11.5)
     parser.add_argument("--stop-start-margin-minutes", type=float, default=75.0)
     parser.add_argument("--batch-size", type=int, default=64)
+    parser.add_argument("--profile-only", action="store_true")
     parser.add_argument("--num-workers", type=int, default=0)
     parser.add_argument("--epochs", type=int, default=100)
     parser.add_argument("--patience", type=int, default=20)
@@ -132,6 +148,8 @@ def main() -> int:
     args = parse_args()
     if not 1 <= args.max_parallel <= 4:
         raise ValueError("--max-parallel must be 1-4 for the locked conservative workflow")
+    if args.batch_size < 1:
+        raise ValueError("--batch-size must be positive")
     if args.num_gpus < 1:
         raise ValueError("--num-gpus must be positive")
     if args.epochs != 100 or args.patience != 20:
@@ -140,6 +158,7 @@ def main() -> int:
     output_dir = Path(args.output_dir).resolve()
     data_dir = Path(args.data_dir).resolve()
     tasks = list(args.tasks or TDC_TASKS)
+    run_mode = "profile_only" if args.profile_only else "formal"
     pending = deque(
         build_queue(
             tasks,
@@ -147,6 +166,8 @@ def main() -> int:
             output_dir,
             data_dir,
             split_source=args.split_source,
+            run_mode=run_mode,
+            batch_size=args.batch_size,
         )
     )
     original_queue = list(pending)
@@ -155,12 +176,19 @@ def main() -> int:
             {
                 "model": MODEL_ID,
                 "already_complete": len(
-                    completed_runs(output_dir, split_source=args.split_source)
+                    completed_runs(
+                        output_dir,
+                        split_source=args.split_source,
+                        run_mode=run_mode,
+                        batch_size=args.batch_size,
+                    )
                 ),
                 "queued": len(pending),
                 "max_parallel": args.max_parallel,
                 "time_budget_hours": args.time_budget_hours,
                 "split_source": args.split_source,
+                "batch_size": args.batch_size,
+                "run_mode": run_mode,
             },
             sort_keys=True,
         )
@@ -200,6 +228,7 @@ def main() -> int:
                     "patience": 20,
                     "batch_size": args.batch_size,
                     "num_workers": args.num_workers,
+                    "profile_only": args.profile_only,
                 }
                 next_gpu += 1
                 future = executor.submit(_worker, payload)
@@ -237,7 +266,12 @@ def main() -> int:
                 print(json.dumps(result, sort_keys=True), flush=True)
 
     finished_at = utc_now()
-    complete_after = completed_runs(output_dir, split_source=args.split_source)
+    complete_after = completed_runs(
+        output_dir,
+        split_source=args.split_source,
+        run_mode=run_mode,
+        batch_size=args.batch_size,
+    )
     summary = {
         "model": MODEL_ID,
         "started_at_utc": started_at,
@@ -251,6 +285,8 @@ def main() -> int:
         "durable_complete_total": len(complete_after),
         "expected_complete_total": len(TDC_TASKS) * 5,
         "split_source": args.split_source,
+        "batch_size": args.batch_size,
+        "run_mode": run_mode,
         "results": results,
     }
     summary_path = _atomic_summary(summary, output_dir)

@@ -11,14 +11,7 @@ from .utils import as_numpy
 
 
 class BinaryProbabilityCalibrator:
-    """Calibrate binary probabilities on validation data.
-
-    The historical method key ``"platt"`` is retained for artifact
-    compatibility, but its implementation is L2-regularized logistic
-    regression on the one-dimensional probability ``p``. It is therefore a
-    logistic-on-probability mapping, not classical Platt scaling on a raw
-    decision score or logit.
-    """
+    """Calibrate binary classification probabilities on validation data."""
 
     def __init__(self, method: str = "isotonic") -> None:
         if method not in {"isotonic", "platt"}:

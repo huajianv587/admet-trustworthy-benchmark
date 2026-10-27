@@ -162,7 +162,12 @@ def _dimension_value(dimension: str) -> float:
     }[dimension]
 
 
-def _write_fixture(root: Path) -> None:
+def _write_fixture(
+    root: Path,
+    *,
+    metadata_correction: bool = True,
+    data_logical_path: str = "data/tdc_official",
+) -> None:
     pool = "gin;rf"
     _csv(
         root,
@@ -631,7 +636,22 @@ def _write_fixture(root: Path) -> None:
 
     fixture_config_path = _path(root, "cleaned_config")
     fixture_config_sha = _sha256(fixture_config_path)
-    execution_config_sha = "1" * 64
+    execution_config_sha = "1" * 64 if metadata_correction else fixture_config_sha
+    config_metadata_corrections = (
+        [
+            {
+                "field": "audit.scaffold_overlap",
+                "old_value": True,
+                "new_value": False,
+                "execution_config_sha256": execution_config_sha,
+                "corrected_config_sha256": fixture_config_sha,
+                "computational_effect": False,
+                "reason": "fixture mirrors the reviewed metadata-only correction",
+            }
+        ]
+        if metadata_correction
+        else []
+    )
     _json(
         root,
         "cleaned_manifest",
@@ -649,17 +669,7 @@ def _write_fixture(root: Path) -> None:
             "config_logical_path": "experiments/config/sensitivity.yaml",
             "config_sha256": fixture_config_sha,
             "execution_config_sha256": execution_config_sha,
-            "config_metadata_corrections": [
-                {
-                    "field": "audit.scaffold_overlap",
-                    "old_value": True,
-                    "new_value": False,
-                    "execution_config_sha256": execution_config_sha,
-                    "corrected_config_sha256": fixture_config_sha,
-                    "computational_effect": False,
-                    "reason": "fixture mirrors the reviewed metadata-only correction",
-                }
-            ],
+            "config_metadata_corrections": config_metadata_corrections,
         },
     )
     cleaned_runs = []
@@ -784,7 +794,7 @@ def _write_fixture(root: Path) -> None:
             "config_metadata_corrections"
         ],
         "config_logical_path": "experiments/config/sensitivity.yaml",
-        "data_logical_path": "data/tdc_official",
+        "data_logical_path": data_logical_path,
         "checks": manifest_checks,
     }
     audit_gate = {
@@ -1117,6 +1127,28 @@ def test_final_locked_builds_transactional_inventory_and_source_audit(tmp_path: 
     )
     assert "\\begin{longtable}" in latex
     assert "validation\\_selected" in latex
+
+
+def test_final_locked_accepts_current_config_without_metadata_correction(
+    tmp_path: Path,
+) -> None:
+    tables = tmp_path / "tables"
+    out = tmp_path / "manuscript_final"
+    _write_fixture(
+        tables,
+        metadata_correction=False,
+        data_logical_path="tdc_official",
+    )
+
+    inventory = build_final_locked(tables, out, contract=CONTRACT)
+
+    assert len(inventory) == 28
+    audit = json.loads((out / "source_audit.json").read_text())
+    assert audit["status"] == "PASS"
+    manifest_source = next(
+        row for row in audit["source_files"] if row["source_id"] == "cleaned_manifest"
+    )
+    assert manifest_source["validation_status"] == "PASS"
 
 
 def test_final_locked_never_falls_back_to_local_preview(tmp_path: Path) -> None:

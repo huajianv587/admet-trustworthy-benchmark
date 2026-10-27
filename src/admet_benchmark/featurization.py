@@ -4,14 +4,7 @@ import numpy as np
 
 
 def featurizable_indices(smiles_list: list[str]) -> list[int]:
-    """Return the row indices accepted by the RDKit molecule parser.
-
-    This is the inexpensive identity-only counterpart to
-    :func:`morgan_count_matrix`.  Artifact audits use it to reconstruct the
-    exact rows retained by the prediction runner without calculating hundreds
-    of thousands of fingerprints a second time.
-    """
-
+    """Return row indices accepted by the RDKit molecule parser."""
     try:
         from rdkit import Chem
     except ImportError as exc:
@@ -29,11 +22,7 @@ def morgan_count_matrix(
     radius: int = 2,
     n_bits: int = 2048,
 ) -> tuple[np.ndarray, list[int]]:
-    """Convert SMILES to a binary Morgan fingerprint matrix.
-
-    The historical function name contains ``count`` for API compatibility;
-    the returned 2,048-dimensional values are binary bits, not occurrence
-    counts.
+    """Convert SMILES to binary Morgan fingerprint matrix.
 
     Returns the feature matrix and indices that were successfully featurized.
     Invalid molecules are skipped and must be mirrored in labels by caller.

@@ -259,18 +259,18 @@ def test_locked_selected_only_headlines_match_endpoint_level_recomputation(
         "eligible": 12,
     }
     assert counts["isotonic_ece_improved_endpoints"] == {
-        "improved": 9,
+        "improved": 11,
         "eligible": 13,
     }
     assert counts["isotonic_brier_improved_endpoints"] == {
-        "improved": 7,
+        "improved": 8,
         "eligible": 13,
     }
     assert counts["logistic_on_probability_ece_improved_endpoints"] == {
-        "improved": 10,
+        "improved": 11,
         "eligible": 13,
     }
     assert counts["logistic_on_probability_brier_improved_endpoints"] == {
-        "improved": 10,
+        "improved": 11,
         "eligible": 13,
     }

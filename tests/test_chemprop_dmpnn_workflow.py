@@ -110,6 +110,28 @@ def test_locked_csv_preserves_existing_split_membership_and_order(tmp_path: Path
     assert all(len(manifest[f"{name}_sha256"]) == 64 for name in ["train", "valid", "test"])
 
 
+def test_profile_locked_csv_omits_test_rows_and_file(tmp_path: Path) -> None:
+    split = _split()
+    combined = tmp_path / "combined.csv"
+    test_path = tmp_path / "test.csv"
+
+    manifest = workflow.prepare_locked_data(
+        split,
+        combined,
+        tmp_path / "valid.csv",
+        test_path,
+        include_test=False,
+    )
+    frame = pd.read_csv(combined)
+
+    assert frame["split"].tolist() == ["train"] * 6 + ["val"] * 4
+    assert not test_path.exists()
+    assert manifest["official_test_preserved"] is False
+    assert manifest["test_n"] is None
+    assert manifest["test_sha256"] is None
+    assert manifest["source_test_sha256"] is None
+
+
 def test_locked_csv_repairs_legacy_valence_without_dropping_official_rows(
     tmp_path: Path,
 ) -> None:
@@ -154,8 +176,19 @@ def test_all_audited_compatibility_repairs_parse_with_rdkit() -> None:
         assert inchi.MolToInchiKey(molecule) == LEGACY_VALENCE_REPAIR_INCHIKEYS[source]
 
 
-def test_stubbed_run_writes_standard_artifacts_and_metrics_last(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+@pytest.mark.parametrize(
+    ("profile_only", "expected_splits", "expected_test_metric"),
+    [
+        (False, {"valid": 4, "test": 4}, 1.0),
+        (True, {"valid": 4}, None),
+    ],
+)
+def test_stubbed_run_writes_artifacts_for_selected_mode(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    profile_only: bool,
+    expected_splits: dict[str, int],
+    expected_test_metric: float | None,
 ) -> None:
     split = _split()
     fake_bin = tmp_path / "chemprop"
@@ -207,22 +240,34 @@ def test_stubbed_run_writes_standard_artifacts_and_metrics_last(
         chemprop_bin=str(fake_bin),
         accelerator="cpu",
         split_override=split,
+        profile_only=profile_only,
     )
     assert result["status"] == "success"
     paths = workflow.artifact_paths(output_dir, "stub_task", 3)
     prediction = pd.read_csv(paths["prediction"])
     assert prediction.columns.tolist() == ["split", "smiles", "label", "prediction"]
-    assert prediction["split"].value_counts().to_dict() == {"valid": 4, "test": 4}
+    assert prediction["split"].value_counts().to_dict() == expected_splits
     metrics = json.loads(paths["metrics"].read_text())
     config = json.loads(paths["config"].read_text())
     assert metrics["status"] == "complete"
     assert metrics["model"] == "chemprop_dmpnn"
     assert metrics["valid_metric"] == 1.0
-    assert metrics["test_metric"] == 1.0
+    assert metrics["test_metric"] == expected_test_metric
+    assert metrics["test_evaluated"] is (not profile_only)
+    assert config["training"]["run_mode"] == (
+        "profile_only" if profile_only else "formal"
+    )
     assert config["architecture"]["message_type"] == "directed_bond_messages"
     assert config["architecture"]["atom_messages"] is False
     assert config["architecture"]["undirected"] is False
-    assert workflow.is_complete(paths["metrics"])
+    expected_mode = "profile_only" if profile_only else "formal"
+    other_mode = "formal" if profile_only else "profile_only"
+    assert workflow.is_complete(
+        paths["metrics"], run_mode=expected_mode, batch_size=64
+    )
+    assert not workflow.is_complete(
+        paths["metrics"], run_mode=other_mode, batch_size=64
+    )
 
 
 def test_failed_run_never_writes_completion_marker(

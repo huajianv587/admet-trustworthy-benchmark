@@ -35,10 +35,7 @@ import torch
 # Add src to path
 sys.path.insert(0, str(Path(__file__).parent.parent / 'src'))
 
-from admet_benchmark.data_loader import (
-    LOCKED_CACHE_SPLIT_SOURCE,
-    SPLIT_SOURCE_CHOICES,
-)
+from admet_benchmark.data_loader import load_tdc_official
 
 # Setup logging
 logging.basicConfig(
@@ -90,17 +87,7 @@ def estimate_training_time(task_name, model_name):
     return base_time * model_mult
 
 
-def worker_process(
-    gpu_id,
-    task_queue,
-    result_queue,
-    output_dir,
-    stop_event,
-    deadline_ts,
-    start_margin_seconds,
-    data_dir,
-    split_source,
-):
+def worker_process(gpu_id, task_queue, result_queue, output_dir, stop_event, deadline_ts, start_margin_seconds):
     """
     Worker process that consumes tasks from queue.
     Each worker gets assigned a GPU device.
@@ -131,9 +118,7 @@ def worker_process(
                 output_dir,
                 device_id=gpu_id,
                 max_epochs=100,
-                patience=20,
-                data_dir=data_dir,
-                split_source=split_source,
+                patience=20
             )
 
             result['gpu_id'] = gpu_id
@@ -149,7 +134,7 @@ def worker_process(
             })
 
 
-def get_completed_runs(output_dir, split_source=LOCKED_CACHE_SPLIT_SOURCE):
+def get_completed_runs(output_dir):
     """Get set of completed run_ids."""
     completed = set()
     checkpoint_dir = output_dir / 'checkpoints'
@@ -163,13 +148,7 @@ def get_completed_runs(output_dir, split_source=LOCKED_CACHE_SPLIT_SOURCE):
             metric_file = metrics_dir / f"{run_id}.json"
 
             if pred_file.exists() and metric_file.exists():
-                try:
-                    payload = json.loads(metric_file.read_text())
-                except (OSError, json.JSONDecodeError):
-                    continue
-                recorded = payload.get("split_source", LOCKED_CACHE_SPLIT_SOURCE)
-                if recorded == split_source:
-                    completed.add(run_id)
+                completed.add(run_id)
 
     return completed
 
@@ -184,11 +163,6 @@ def main():
                        help='Random seeds')
     parser.add_argument('--output-dir', type=str, default='results/neural',
                        help='Output directory')
-    parser.add_argument('--data-dir', type=str, default='data/tdc_official',
-                       help='TDC cache root')
-    parser.add_argument('--split-source', choices=SPLIT_SOURCE_CHOICES,
-                       default=LOCKED_CACHE_SPLIT_SOURCE,
-                       help='Explicit split protocol; formal runs use locked_cache')
     parser.add_argument('--max-parallel', type=int, default=8,
                        help='Maximum parallel runs (8-12 recommended for A40)')
     parser.add_argument('--num-gpus', type=int, default=1,
@@ -224,7 +198,7 @@ def main():
     models = [args.model] if args.model else ['gin', 'dmpnn']
 
     # Get completed runs
-    completed = get_completed_runs(output_dir, args.split_source)
+    completed = get_completed_runs(output_dir)
     logger.info(f"Found {len(completed)} completed runs")
 
     # Build run queue with priority (small tasks first for quick wins)
@@ -248,7 +222,6 @@ def main():
     logger.info(f"Seeds: {seeds}")
     logger.info(f"Max parallel: {args.max_parallel}")
     logger.info(f"Num GPUs: {args.num_gpus}")
-    logger.info(f"Split source: {args.split_source}")
     logger.info(f"Stop-start margin: {args.stop_start_margin_minutes:.1f} minutes")
 
     if total_runs == 0:
@@ -292,17 +265,7 @@ def main():
         gpu_id = i % args.num_gpus
         p = mp.Process(
             target=worker_process,
-            args=(
-                gpu_id,
-                task_queue,
-                result_queue,
-                output_dir,
-                stop_event,
-                deadline_ts,
-                start_margin_seconds,
-                args.data_dir,
-                args.split_source,
-            )
+            args=(gpu_id, task_queue, result_queue, output_dir, stop_event, deadline_ts, start_margin_seconds)
         )
         p.start()
         workers.append(p)

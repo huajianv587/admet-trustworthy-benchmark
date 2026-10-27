@@ -1,5 +1,4 @@
 .DS_Store
-._*
 __pycache__/
 *.py[cod]
 .pytest_cache/
@@ -20,7 +19,3 @@ paper/*.blg
 paper/*.log
 paper/*.out
 paper/*.toc
-
-# Author-controlled metadata is a private build input. Never stage or release it.
-paper/submission_metadata.private.json
-paper/submission_metadata_audit.json

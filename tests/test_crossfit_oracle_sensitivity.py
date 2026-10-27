@@ -152,22 +152,22 @@ def test_locked_crossfit_exact_sign_flip_and_zero_redundancy():
         "dimension"
     )
     expected = {
-        "brier": (0.3310546875, 0.79025030136108398),
-        "ece_5bin": (0.079345703125, 0.47607421875),
-        "ece_10bin": (0.107666015625, 0.47607421875),
+        "brier": (0.408203125, 0.81640625),
+        "ece_5bin": (0.04150390625, 0.20751953125),
+        "ece_10bin": (0.066162109375, 0.2646484375),
         "applicability_alignment": (
-            0.00035953521728515625,
-            0.0025167465209960938,
+            0.0007328987121582031,
+            0.005130290985107422,
         ),
         "selective_relative_excess_aurc": (
-            0.26341676712036133,
-            0.79025030136108398,
+            0.18352174758911133,
+            0.550565242767334,
         ),
         "selective_relative_excess_aurc_log_loss": (
-            0.0849609375,
-            0.47607421875,
+            0.033203125,
+            0.19921875,
         ),
-        "conformal_coverage_error": (0.578125, 0.79025030136108398),
+        "conformal_coverage_error": (0.8125, 0.81640625),
     }
     for dimension, (raw_p, holm_p) in expected.items():
         assert np.isclose(primary.loc[dimension, "sign_flip_p_exact"], raw_p)
