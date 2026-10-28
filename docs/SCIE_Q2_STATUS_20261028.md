@@ -1,46 +1,50 @@
-# SCIE Q2 Submission Status: 2026-10-28
+# SCIE Q2 readiness status - 2026-10-28
 
-Status: `PREUPLOAD_HOLD; CANDIDATE_READY_FOR_AUTHOR_REVIEW_ONLY`
+## Decision
 
-This public status note describes the evidence boundary of the current source
-release. It is not an acceptance guarantee or a substitute for the
-authenticated journal portal record.
+`PREUPLOAD_HOLD; CANDIDATE_READY_FOR_AUTHOR_REVIEW_ONLY`
 
-## Study scope
+The manuscript is a prepared submission candidate for *SAR and QSAR in
+Environmental Research*. This status does not guarantee acceptance, a Q2
+decision, or zero total author payment.
 
-- 22 fixed TDC ADMET endpoints, five model families and five seeds: 550 fit
-  slots.
-- The grouped nested-refit secondary-loss audit is conditional retrospective
-  evidence; it does not establish independent external validation.
-- The original four-endpoint confirmatory matrix remains `0/150
-  POWER_FAIL_HOLD` because its outcome-blind power gate failed before fitting.
+## Completed in this refresh
 
-## Calibration estimands
+- Unified the manuscript, cover letter and portal entry sheet title:
+  `An Auditable Reliability-Regret Profile for Retrospective ADMET QSAR Model
+  Selection: A Fixed-Benchmark Study Across 22 Endpoints`.
+- Recorded Huajian Jiang as the sole, first and corresponding author.
+- Set correspondence to `jian0157@e.ntu.edu.sg` and retained ORCID
+  `0009-0001-3992-2286`.
+- Recorded no funding, no relevant competing interests, no acknowledgements,
+  and public-data computational ethics wording.
+- Prepared the CRediT entry for final portal selection.
+- Kept the data/code release boundary explicit: Zenodo v1.0.0 is core-only;
+  later external diagnostic artifacts are not silently attributed to that DOI.
+- Preserved the broader AI-use disclosure boundary; exact tool/version/date
+  reconciliation remains open.
 
-Figure 4 is the candidate-model-averaged calibration summary. Isotonic
-calibration reduced ECE on 13/13 endpoint means and Brier score on 6/13; the
-legacy raw-probability logistic transform improved ECE on 10/13 and Brier score
-on 10/13. The separate validation-selected-model sensitivity reports isotonic
-ECE/Brier improvement on 11/13 and 8/13 endpoints, respectively. These are
-different post-hoc estimands and must not be combined.
+## Scientific evidence boundary
 
-## External-source boundary
+- Formal internal matrix: 550/550 retained artifact records.
+- ExpansionRx: 200/200 validation-only post-hoc slots; 33/40 leave-one-seed
+  agreements; no test-target comparison.
+- Broad confirmatory external matrix: `0/150 POWER_FAIL_HOLD`.
+- Outcome-blind strict-cohort scan: `0/6` cohorts passed.
+- Focused CYP2D6: exploratory only because test-role outcomes were inspected
+  before the focused protocol freeze.
 
-ExpansionRx `150/150` is an execution and metric-completeness count for a
-separate retrospective regression matrix. It is not the original confirmatory
-matrix and is not independent prospective confirmation. ExpansionRx, Octant,
-AID777 and focused CYP2D6 results are source-specific or retrospective
-diagnostics. The outcome-blind feasibility scan passed `0/6` strict cohort
-gates.
+No wording, seed repetition, GPU concurrency, duplicated records, threshold
+change or cohort pooling may convert these results into independent 150/150
+confirmation. A legitimate 150/150 requires 150 valid, endpoint-equivalent,
+outcome-blind and adequately powered confirmatory fit slots after a frozen
+protocol.
 
-## Reproducibility and release
+## Remaining hard gates
 
-The public release contains code, sanitized configurations, de-identified
-prediction views, result tables, figures and audit outputs. Raw TDC records,
-source structures and labels, model checkpoints and credentials are not
-redistributed. Exact label-dependent replay requires an authorised matching
-TDC snapshot and the documented split protocol.
-
-Local document packaging and regression tests establish artifact consistency;
-they do not establish independent human review, external assay validity,
-prospective deployment performance or SCIE Q2 acceptance.
+1. Final CRediT selection and exact AI tool/version/date record.
+2. Final repository/supplementary release route for later diagnostics.
+3. Authenticated Research Article, subscription/non-OA and final fee screen.
+4. Category-level JCR Q2 evidence saved from an accepted institutional record.
+5. Author review of the rendered manuscript, anonymous files, supplement and
+   portal preview, followed by the author's submission decision.
