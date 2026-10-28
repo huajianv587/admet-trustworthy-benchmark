@@ -4,6 +4,7 @@
 \usepackage{longtable}
 \usepackage{array}
 \usepackage{hyperref}
+\setlength{\emergencystretch}{3em}
 \title{Supplementary Material: Validation-Based Model Selection and Test Reliability Regret in ADMET Prediction}
 \author{Huajian Jiang}
 \date{}
@@ -22,8 +23,10 @@ The primary matrix contains 22 endpoints, five model families, and five seeds
 LightGBM, GIN, and Chemprop D-MPNN. The cleaned-data sensitivity matrix contains
 120 additional fits and is analyzed separately. The descriptive external
 transport diagnostics contain 120 traditional-model fits, 20 GIN inference
-files, and 10 Chemprop inference files; these descriptive files are not counted
-as broad confirmatory external validation. A separate narrow CYP2D6 rerun is
+files, and 10 Chemprop inference files. These 150 external artifacts are
+descriptive only and are not the historical 150-slot confirmatory matrix,
+which was held before model fitting because its outcome-blind power gate failed.
+A separate narrow CYP2D6 rerun is
 reported in the main manuscript and kept in its own audited evidence ledger.
 
 \section{Validation-only ExpansionRx replication}
@@ -86,14 +89,50 @@ Applicability alignment & 22 & 0.1195 & [0.0739, 0.1770] & 15/22; 12/22 \\
 \caption{Source-linked summaries from the locked reliability-regret tables.}
 \end{table}
 
+\section{Cross-fitted oracle sensitivity}
+To test sensitivity to one fixed partition of the already examined TDC test
+set, we repeated a grouped two-fold analysis 500 times per endpoint without
+retraining. The validation-selected family was frozen. In each repeat, a
+dimension-specific candidate oracle was selected on one fold and evaluated on
+the other fold, followed by the reverse direction; the two directions were
+averaged before endpoint-level bootstrap summaries. The primary grouping was
+Bemis--Murcko scaffold, with canonical molecular identity as a secondary
+sensitivity. Negative signed differences were retained and were not truncated.
+
+\begin{table}[ht]
+\centering
+\begin{tabular}{lrrrl}
+\toprule
+Dimension & Endpoints & Mean signed $D$ & 95\% endpoint interval & Holm $p$ \\
+\midrule
+Brier & 13 & 0.0035 & [-0.0029, 0.0113] & 0.8164 \\
+ECE (10 bins) & 13 & 0.0198 & [0.0026, 0.0405] & 0.2646 \\
+Primary relative excess AURC & 22 & 0.0272 & [-0.0075, 0.0666] & 0.5506 \\
+Applicability alignment & 22 & 0.0797 & [0.0402, 0.1234] & 0.0051 \\
+\bottomrule
+\end{tabular}
+\caption{Primary Bemis--Murcko cross-fit oracle sensitivity. The signed
+difference is the loss of the validation-selected family minus the loss of the
+oracle selected on the opposite fold. The Holm value is descriptive across the
+seven dimensions and does not create confirmatory evidence.}
+\end{table}
+
+The full seven-dimension summaries, canonical-identity sensitivity, fold-level
+records, input-alignment audit, and analysis gate are retained in
+\path{results/tables/crossfit_oracle_sensitivity_final/}. This analysis
+still reuses the previously examined TDC test labels, does not refit models,
+and does not establish independent external validation or a deployable model
+selector.
+
 \section{Evidence and limitations}
 The retained core-matrix release gate reports 550/550 exact run keys and status
 \texttt{GO}. The formal CPU ledger was executed in the tracked remote research
 environment; the local Mac replay of the 330 traditional-model artifacts is a
 separate verification lane. The broad confirmatory external-cohort matrix
 remains unstarted because its outcome-blind power screen is
-\texttt{POWER\_FAIL\_HOLD}; the planned matrix therefore remains
-\texttt{0/150}, not a completed confirmatory result. A separate narrow CYP2D6
+\texttt{POWER\_FAIL\_HOLD}; the historical confirmatory matrix therefore remains
+\texttt{0/150}, not a completed confirmatory result; the 150 descriptive
+artifacts listed above do not change that status. A separate narrow CYP2D6
 rerun completed 10/10 prediction packages, but it is exploratory only:
 test-role metrics were examined before protocol freeze, and all ten rerun
 predictions were byte-identical to the earlier candidate outputs. Hash and

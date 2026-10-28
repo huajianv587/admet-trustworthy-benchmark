@@ -181,20 +181,18 @@ regulatory, or stand-alone compound-safety tools.
 
 ## Current candidate update 2026 10 28
 
-The canonical manuscript is `docs/MANUSCRIPT_MASTER_20261024.md`, revised
-on 2026-10-26. Current readiness and limits are in
-`docs/SCIE_Q2_STATUS_20261028.md`. Formal prediction recomputation and the
-post hoc identity-unit sensitivity are in
-`results/identity_unit_sensitivity_20261026/`. All 550 formal runs are locally
-accessible; the separate Mac replay is not substituted. A complete training
+The canonical manuscript source is `paper/main.tex`, with supplementary source
+in `paper/supplementary.tex`. Current readiness and limits are in
+`docs/SCIE_Q2_STATUS_20261028.md`. All 550 formal runs are retained in the
+audited ledger; the separate Mac replay is not substituted. A complete training
 environment replay and independent external validation are not established.
 
-The correct validation-selected RRP winner agreement counts are 3/13 ECE,
-6/13 Brier, 2/9 coverage, 5/22 relative excess AURC and 3/22 support alignment.
-Older test-performance-winner counts refer to a different estimand. Repeated
-identity sensitivities retain reliability gaps while changing some endpoint
-counts. The support cutoff selective-gain contrast remains exploratory and
-numerically order-sensitive. The manuscript remains on scientific, disclosure
+The current locked validation-selected RRP winner agreement counts are 4/13
+uncalibrated ECE, 8/13 Brier, 2/9 coverage error, 2/22 primary selective-risk
+gain, and 4/22 applicability alignment. These are fixed-test candidate-pool
+comparisons, not a deployable selector. The post-hoc grouped cross-fit
+sensitivity is retained as a separate zero-retraining analysis and does not
+establish external validity. The manuscript remains on scientific, disclosure
 and venue hold; local tests and file packaging do not establish Q2 readiness.
 Published v1.0.0 metadata describe the historical core release. The Git
 repository update dated 2026-10-27 contains current source corrections and

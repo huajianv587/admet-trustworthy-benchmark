@@ -25,6 +25,11 @@
 
 - Formal internal matrix: `550/550_ARTIFACT_COMPLETE`.
 - ExpansionRx: `200/200_VALIDATION_ONLY_POST_HOC`.
+- Cross-fit oracle sensitivity: 500 repeated grouped two-fold splits per
+  endpoint, zero retraining; retained as retrospective sensitivity only.
+- Descriptive external artifacts: `120` traditional fits + `20` GIN prediction
+  files + `10` Chemprop prediction files = `150` artifacts; this is not the
+  confirmatory matrix.
 - Broad confirmatory external matrix: `0/150_POWER_FAIL_HOLD`.
 - Strict outcome-blind cohorts: `0/6_PASSED`.
 - Focused CYP2D6: exploratory only because test-role outcomes were inspected

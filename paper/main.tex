@@ -378,6 +378,22 @@ endpoint-bootstrap intervals are descriptive summaries of this fixed
 task set and should not be interpreted as population-level inference
 over independent assays.
 
+\textbf{Cross-fitted oracle sensitivity.}
+Because the primary reliability reference is constructed after observing the
+fixed test partition, we performed a post-hoc zero-retraining sensitivity
+analysis within that same partition. For each endpoint, 500 repeated grouped
+two-fold splits were created using Bemis--Murcko scaffolds (with canonical
+identity fallback for acyclic molecules). In one direction, the dimension-
+specific candidate oracle was selected on fold A and evaluated on fold B; the
+reverse direction was then evaluated, and the two directions were averaged.
+The validation-selected family remained fixed throughout. Negative signed
+differences were retained rather than truncated, and endpoint-level bootstrap
+intervals were used for summaries. A canonical-identity grouping was analyzed
+as a secondary sensitivity. This analysis reduces dependence on one arbitrary
+partition of the fixed test set, but it still reuses the previously examined
+TDC test labels, does not refit models, and is neither external validation nor
+a deployable selector.
+
 \subsubsection{2.7. Reproducibility and data
 access}\label{reproducibility-and-data-access}
 
@@ -433,12 +449,15 @@ ledger comprised RF, XGBoost, and LightGBM fits for five seeds (15 files) and
 locked GIN and Chemprop inference for five seeds each (10 files). B3DB labels
 were not used for model fitting or checkpoint selection.
 
-The planned confirmatory external analysis required a separate 150-fit
+The planned confirmatory external analysis retained a separate 150-slot
 matrix and a prespecified outcome-blind power gate. That gate did not pass,
 and the B3DB candidate's outcome-blind log-loss power screen also failed
 (power 0.118 for a +0.010 log-loss effect under the prespecified simulation),
 so neither descriptive diagnostic is a substitute for the unrun confirmatory
-analysis.
+analysis. For clarity, the completed v3 descriptive package contains 120
+traditional-model fits plus 20 GIN and 10 Chemprop prediction files, i.e.,
+150 external artifacts, but those artifacts are explicitly descriptive and
+must not be reported as a completed 150-fit confirmatory matrix.
 
 \subsubsection{2.9. Validation-only ExpansionRx replication}\label{validation-only-expansionrx-replication}
 
@@ -536,6 +555,19 @@ and 81.8\%, respectively. These values are candidate-pool comparisons
 made after observing the fixed test set; they do not define a deployable
 test-set selection rule.
 
+As a zero-retraining sensitivity to the single fixed-test partition, the
+grouped cross-fit analysis gave a mean signed difference of 0.0035 for Brier
+loss (13 endpoints; 95\% endpoint interval, -0.0029 to 0.0113), 0.0198 for
+ten-bin ECE (13 endpoints; 0.0026 to 0.0405), 0.0272 for primary relative
+excess AURC (22 endpoints; -0.0075 to 0.0666), and 0.0797 for applicability
+alignment (22 endpoints; 0.0402 to 0.1234) under Bemis--Murcko grouping.
+The corresponding descriptive Holm-adjusted values across the seven reported
+dimensions were 0.8164, 0.2646, 0.5506, and 0.0051, respectively. These
+results are consistent with a dimension-specific reliability gap, especially
+for applicability alignment, but remain retrospective sensitivity results
+because the fixed TDC test labels had already been examined and no models were
+refit.
+
 \subsubsection{3.4. Reliability conditional on chemical
 support}\label{reliability-conditional-on-chemical-support}
 
@@ -583,8 +615,10 @@ tables report metrics as means and standard deviations across the five seeds,
 without pooling cohorts or treating seeds as independent external replicates.
 The outcome-blind power screen for the planned confirmatory external analysis
 did not pass, and the B3DB candidate power screen was also below the
-prespecified threshold; the 150-fit broad confirmatory matrix therefore
-remained at \texttt{0/150 POWER\_FAIL\_HOLD}. The focused CYP2D6 diagnostic
+prespecified threshold; the historical 150-slot broad confirmatory matrix
+therefore remained at \texttt{0/150 POWER\_FAIL\_HOLD}. The 150 descriptive
+artifacts described above are not counted as confirmatory slots. The focused
+CYP2D6 diagnostic
 is reported separately in Section~3.8 because its test-role outcomes were
 examined before protocol freeze; it is excluded from confirmatory external
 evidence.
@@ -705,7 +739,10 @@ and external sources may share compounds or source lineage;
 endpoint-level bootstrap intervals and seed summaries are descriptive
 and do not represent independent assay-level sampling. Third, the
 test-set reliability oracle is an after-the-fact candidate-pool
-reference and is not an implementable model-selection rule. Fourth,
+reference and is not an implementable model-selection rule. The grouped
+cross-fit sensitivity reduces dependence on one fixed partition but still
+reuses the previously examined TDC test labels and does not provide external
+confirmation. Fourth,
 several practical thresholds and the combined gate were defined in code
 during analysis development rather than registered prospectively. Fifth,
 Chemprop used a validation-MAE checkpoint proxy on Spearman-designated

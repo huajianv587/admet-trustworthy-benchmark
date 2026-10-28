@@ -17,6 +17,9 @@ portal preview remains the authoritative upload check.
 Scientific boundary retained in all included records:
 
 - broad confirmatory external matrix: `0/150 POWER_FAIL_HOLD`;
+- descriptive external package: `150` artifacts (`120` traditional fits,
+  `20` GIN prediction files, `10` Chemprop prediction files), not confirmatory;
+- grouped cross-fit oracle sensitivity: retrospective, zero-retraining only;
 - ExpansionRx: validation-only post-hoc diagnostic, not independent
   confirmation;
 - focused CYP2D6: exploratory only because of prior test-role exposure.

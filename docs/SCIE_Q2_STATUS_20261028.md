@@ -38,6 +38,11 @@ decision, or zero total author payment.
 - Formal internal matrix: 550/550 retained artifact records.
 - ExpansionRx: 200/200 validation-only post-hoc slots; 33/40 leave-one-seed
   agreements; no test-target comparison.
+- Cross-fit oracle sensitivity: 500 repeated grouped two-fold splits per
+  endpoint, zero retraining; retrospective sensitivity only. The completed
+  descriptive external package contains 120 traditional fits plus 20 GIN and
+  10 Chemprop prediction files (150 artifacts), which is distinct from the
+  historical confirmatory `0/150` plan.
 - Broad confirmatory external matrix: `0/150 POWER_FAIL_HOLD`.
 - Outcome-blind strict-cohort scan: `0/6` cohorts passed.
 - Focused CYP2D6: exploratory only because test-role outcomes were inspected
