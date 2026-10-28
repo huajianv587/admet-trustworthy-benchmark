@@ -2,7 +2,7 @@
 
 ## Repository
 
-- Git commit: `29daa2b379cba5145fe6c3c9265fea8974d4dace`
+- Git commit: `7b8afc6839dd97902e958310098cc27caf37e023`
 - Remote branch: `origin/main` contains the same commit.
 - The repository update contains the nested secondary-loss audit and the
   reproducibility/provenance hardening changes. It does not constitute an
@@ -15,10 +15,11 @@
   stale `rdkit_pypi 2022.09.5` files despite newer package metadata.
 - Regression suite: `224 passed, 6 skipped`.
 - Remaining test output: 22 Pandas compatibility warnings; no test failures.
-- Submission ZIP: `unzip -tq` passed.
-- Submission ZIP SHA-256:
-  `debd879a2fcf34830126970d53282e861933486ab24f4711605c5680c7f80011`.
-- Named manuscript PDF: 13 pages. Supplementary PDF: 3 pages.
+- Submission ZIP: `submission/SAR_QSAR_submission_candidate_package_refreshed_20261028_v2.zip`; `unzip -tq` passed.
+- Submission ZIP SHA-256 is recorded in the sidecar file
+  `submission/SAR_QSAR_submission_candidate_package_refreshed_20261028_v2.zip.sha256`.
+- Named manuscript PDF: 19 pages. Supplementary PDF: 3 pages.
+- Project tests: `224 passed, 6 skipped`.
 
 ## Scientific boundary
 
@@ -38,7 +39,8 @@ valid `150/150` confirmatory result.
 The publisher's public journal page describes SAR and QSAR in Environmental
 Research as a hybrid Open Select journal and states that an article published
 on the subscription route has no APC. This is not a substitute for the final
-authenticated portal fee screen.
+authenticated portal fee screen or evidence about any optional page/colour
+charges.
 
 Public secondary JCR summaries disagree by category: some list Q2 for
 Mathematical & Computational Biology while listing Q3 for Environmental

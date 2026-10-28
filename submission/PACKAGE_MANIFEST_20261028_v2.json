@@ -1,0 +1,151 @@
+{
+  "schema": "sar_qsar_candidate_package_manifest_v2",
+  "created_at_utc": "2026-10-28T09:45:30.754837+00:00",
+  "status": "PREUPLOAD_HOLD; CANDIDATE_READY_FOR_AUTHOR_REVIEW_ONLY",
+  "target_journal": "SAR and QSAR in Environmental Research",
+  "route": "subscription/non-OA candidate; authenticated article-type and fee screen pending",
+  "package": "/Users/guohuiwen/8- 医学/admet-trustworthy-benchmark_latest_20261021/submission/SAR_QSAR_submission_candidate_package_refreshed_20261028_v2.zip",
+  "main_pdf_pages": 19,
+  "supplementary_pdf_pages": 3,
+  "tests": "224 passed, 6 skipped",
+  "scientific_scope": {
+    "formal_internal_matrix": "550/550_ARTIFACT_COMPLETE",
+    "expansionrx": "200/200_VALIDATION_ONLY_POST_HOC; 33/40 leave-one-seed agreement",
+    "broad_confirmatory_external_matrix": "0/150 POWER_FAIL_HOLD",
+    "focused_cyp2d6": "EXPLORATORY_ONLY_PRIOR_TEST_ROLE_EXPOSURE"
+  },
+  "members": [
+    {
+      "path": "docs/AI_USE_LEDGER_20261025.md",
+      "sha256": "69eb9cb05c4ffc8db58c6fa91ce114b9668078126a42c4770ed17ff551982b59",
+      "bytes": 1000
+    },
+    {
+      "path": "docs/EXPANSIONRX_VALIDATION_REPLICATION_AUDIT_20261027.md",
+      "sha256": "2f03b18aa45a829b9ba748608fd2c7f6b8a1b83d0db9b1df6ea90bd0b402dd23",
+      "bytes": 2691
+    },
+    {
+      "path": "docs/NEAR_NEIGHBOR_COMPARISON_20261020.md",
+      "sha256": "958e469f66eb0e992cebf93cdc0a038ae7d0f23fe415b1cefba7aad774e06c2c",
+      "bytes": 4329
+    },
+    {
+      "path": "docs/PAPER_CLAIM_AUDIT_Q2_REPAIR_20261025.md",
+      "sha256": "a4adec2ea1eed376a4cadb1bf3c8e5afad60f272099c7d450c5b8d3babbdc325",
+      "bytes": 1282
+    },
+    {
+      "path": "docs/PREUPLOAD_VERIFICATION_20261028.md",
+      "sha256": "215b6c6f470726bf7eb55add91b730fbe1723a04fd136d038af4a69f789c7c9e",
+      "bytes": 2677
+    },
+    {
+      "path": "docs/RESULTS_NUMERIC_AUDIT_20261021.md",
+      "sha256": "691951a21aaef5f6a59fffdd0a01c057dd0287f590ef5697f37aab2ca2658eac",
+      "bytes": 9223
+    },
+    {
+      "path": "docs/SCIE_Q2_STATUS_20261028.md",
+      "sha256": "090894fcd3af3aebd33c5ae5ded6a6e7ef14bd68c82fc6fc8b892e17a9f2e54e",
+      "bytes": 3209
+    },
+    {
+      "path": "docs/VALIDATION_RELIABILITY_SELECTOR_PROTOCOL_20261026.md",
+      "sha256": "bac0cfb4d782c2abf334f3cb3e0721bdcf8f9ef9f983d0c187c8449aee3ade45",
+      "bytes": 2944
+    },
+    {
+      "path": "results/external_candidate_aid1851_semantic_audit_20251025.json",
+      "sha256": "fc8af3ab3bfc9e93aba9efd89acf85707fa0ee98485af9e8628f2785e12d2248",
+      "bytes": 1989
+    },
+    {
+      "path": "results/external_replication_20261026/validation_selector/analysis_manifest.json",
+      "sha256": "0db97eb6f474bd4a73f72e41b6e5c04272d5c993e96bd354ad3d0d296763ba91",
+      "bytes": 2574
+    },
+    {
+      "path": "results/external_replication_20261026/validation_selector/crossfit_validation_selection.csv",
+      "sha256": "499740a5e2a464c255d9aa4f5682d29dbac347aec8c04c9e591bd67211b1d23b",
+      "bytes": 3491
+    },
+    {
+      "path": "results/external_replication_20261026/validation_selector/selection_before_test.csv",
+      "sha256": "9f4f1891a6f7173d6c3b0a2b3e909a7bb780240172c7e5cfb8308ff8c314c6ac",
+      "bytes": 4808
+    },
+    {
+      "path": "results/external_replication_20261026/validation_selector/selection_freeze.json",
+      "sha256": "5413902a0c197b92b510c0732439aea18b9269f44088a70ce8cb9486ad86ba6b",
+      "bytes": 57104
+    },
+    {
+      "path": "results/q2_local_repair_manifest_20261025.json",
+      "sha256": "7d07dce0a91c0e6945136292e74ec93830a472249559835fe259aad41854206c",
+      "bytes": 1898
+    },
+    {
+      "path": "submission/COVER_LETTER_SAR_QSAR_CANDIDATE_20261025.md",
+      "sha256": "5e8853ace4dd390a95e20607cc85db22e9f92a182b7871d5b5788a85099b927f",
+      "bytes": 3207
+    },
+    {
+      "path": "submission/FINAL_AUTHOR_CONFIRMATION_SAR_QSAR_20261028.md",
+      "sha256": "dc45e63a2e6a04a9d5e89daeca4b1806b30f86a49f9694224fd75dc4c62872e2",
+      "bytes": 2767
+    },
+    {
+      "path": "submission/SAR_QSAR_ADMET_reliability_manuscript_candidate_20261028.docx",
+      "sha256": "38b54c16de935330feec742ae810f5538a85f2fa5c0fcdd4d7ad253a2845c1b2",
+      "bytes": 1585284
+    },
+    {
+      "path": "submission/SAR_QSAR_ADMET_reliability_manuscript_candidate_20261028.pdf",
+      "sha256": "2c612ba98106cf3843c1366061ac182ffde1dd187f2092b60ba1ac9e21ae0378",
+      "bytes": 1639769
+    },
+    {
+      "path": "submission/SAR_QSAR_CANDIDATE_PACKAGE_README_20261028.md",
+      "sha256": "9e4ffc4c5eb10c1a6d997c8e67ebc94754b2321bd2132e4a5f8a7cdc41e93e6f",
+      "bytes": 1417
+    },
+    {
+      "path": "submission/SAR_QSAR_PORTAL_ENTRY_SHEET_20261027.md",
+      "sha256": "9c7c29b0359ddbe50cd3410782245cf02a1fdaf95b637e427b9cd10d4ef8ccd3",
+      "bytes": 1941
+    },
+    {
+      "path": "submission/SAR_QSAR_SUBMISSION_CHECKLIST_20261027.md",
+      "sha256": "fa844c4269816fd2902d6decbbc03d5572706e1224c3d8932625a2cb0636e830",
+      "bytes": 2296
+    },
+    {
+      "path": "submission/SAR_QSAR_supplementary_20261028.pdf",
+      "sha256": "e9165d17559b458a98977ba665aa1feade5e3ff77f3eb0ad8974cbf1dde93ea2",
+      "bytes": 32911
+    },
+    {
+      "path": "submission/SUPPLEMENTARY_EXTERNAL_TRANSPORT_DIAGNOSTIC.csv",
+      "sha256": "bd72d1b7bea8586deac3bbd0fb0465d2fe37eb17d65aa249a62d090f26ff605a",
+      "bytes": 18192
+    },
+    {
+      "path": "submission/SUPPLEMENTARY_EXTERNAL_TRANSPORT_DIAGNOSTIC_README.md",
+      "sha256": "d5d5b16f701e8365c235fccd966f7cfc7553a6dd4476b1bb0698f451af064614",
+      "bytes": 812
+    },
+    {
+      "path": "submission/sar_qsar_submission_gate_20261028.json",
+      "sha256": "07eb0410ad15d650e89cab54f5e64dce2a4e0c0d5a43bf029b52f960ad6a377b",
+      "bytes": 2551
+    }
+  ],
+  "open_gates": [
+    "exact AI product/version/date disclosure",
+    "final public/supplementary release route for later diagnostics",
+    "authenticated Research Article and subscription/non-OA fee screen",
+    "category-level institutional JCR evidence",
+    "author review of PDF, DOCX, supplement and portal preview"
+  ]
+}

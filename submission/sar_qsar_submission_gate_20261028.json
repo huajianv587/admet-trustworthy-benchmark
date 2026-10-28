@@ -1,0 +1,60 @@
+{
+  "schema": "sar_qsar_submission_gate_v1",
+  "date": "2026-10-28",
+  "status": "PREUPLOAD_HOLD",
+  "candidate_status": "CANDIDATE_READY_FOR_AUTHOR_REVIEW_ONLY",
+  "refresh": {
+    "main_pdf_pages": 19,
+    "supplementary_pdf_pages": 3,
+    "pytest": "224 passed, 6 skipped",
+    "manuscript_docx_sha256": "38b54c16de935330feec742ae810f5538a85f2fa5c0fcdd4d7ad253a2845c1b2",
+    "manuscript_pdf_sha256": "2c612ba98106cf3843c1366061ac182ffde1dd187f2092b60ba1ac9e21ae0378",
+    "supplementary_pdf_sha256": "e9165d17559b458a98977ba665aa1feade5e3ff77f3eb0ad8974cbf1dde93ea2",
+    "candidate_package": "submission/SAR_QSAR_submission_candidate_package_refreshed_20261028_v2.zip",
+    "candidate_package_sha256_sidecar": "submission/SAR_QSAR_submission_candidate_package_refreshed_20261028_v2.zip.sha256"
+  },
+  "target_journal": "SAR and QSAR in Environmental Research",
+  "article_type": "Research Article",
+  "route": "subscription/non-OA",
+  "author": {
+    "name": "Huajian Jiang",
+    "author_count": 1,
+    "first": true,
+    "corresponding": true,
+    "affiliation": "Nanyang Technological University, Singapore",
+    "email": "jian0157@e.ntu.edu.sg",
+    "orcid": "0009-0001-3992-2286"
+  },
+  "declarations": {
+    "funding": "none",
+    "competing_interests": "none",
+    "acknowledgements": "none",
+    "ethics": "public chemical/assay data; no human participants, identifiable personal data or human materials",
+    "credit": "prepared_for_final_portal_selection",
+    "ai": "exact_tool_version_date_reconciliation_pending",
+    "data_code_release": "core_doi_scope_confirmed; later_diagnostics_route_pending"
+  },
+  "scientific_gates": {
+    "formal_internal_matrix": "550/550_ARTIFACT_COMPLETE",
+    "expansionrx": "200/200_VALIDATION_ONLY_POST_HOC",
+    "confirmatory_external_matrix": "0/150_POWER_FAIL_HOLD",
+    "strict_outcome_blind_cohorts": "0/6_PASSED",
+    "focused_cyp2d6": "EXPLORATORY_ONLY_PRIOR_TEST_ROLE_EXPOSURE"
+  },
+  "prohibited_claims": [
+    "independent external validation",
+    "prospective or temporal validity",
+    "deployable selector",
+    "clinical utility",
+    "acceptance guarantee",
+    "zero total publication cost before authenticated fee evidence"
+  ],
+  "author_action_required": [
+    "confirm final CRediT selection",
+    "reconcile exact AI tool/version/date disclosure",
+    "choose final public/supplementary release route",
+    "verify portal article type, route and final fee screen",
+    "save institutional category-level JCR record",
+    "review preview and make final submission decision"
+  ]
+}

@@ -1,0 +1,132 @@
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{array}
+\usepackage{hyperref}
+\title{Supplementary Material: Validation-Based Model Selection and Test Reliability Regret in ADMET Prediction}
+\author{Huajian Jiang}
+\date{}
+\begin{document}
+\maketitle
+
+\begin{quote}
+This supplement records the locked analysis contracts, source-linked result
+inventory, and evidence boundaries. It is not an independent validation report
+and does not replace the primary manuscript's stated limitations.
+\end{quote}
+
+\section{Locked experiment matrix}
+The primary matrix contains 22 endpoints, five model families, and five seeds
+(1--5), for 550 fit slots. The model families are random forest, XGBoost,
+LightGBM, GIN, and Chemprop D-MPNN. The cleaned-data sensitivity matrix contains
+120 additional fits and is analyzed separately. The descriptive external
+transport diagnostics contain 120 traditional-model fits, 20 GIN inference
+files, and 10 Chemprop inference files; these descriptive files are not counted
+as broad confirmatory external validation. A separate narrow CYP2D6 rerun is
+reported in the main manuscript and kept in its own audited evidence ledger.
+
+\section{Validation-only ExpansionRx replication}
+The post-hoc ExpansionRx replication contains eight regression endpoints, five
+candidate model families, and five seeds per family (200 model slots). The
+validation-reliability selector (VRRS) combines equal within-endpoint rank scores
+for validation MAE and support/error Spearman correlation. The selector protocol
+was written after execution and is therefore not preregistered, but the selection
+table and selector freeze were completed before any test-target directory was
+opened. The selector map and the validation-MAE-only comparator are:
+
+\begin{longtable}{p{0.30\linewidth}p{0.28\linewidth}p{0.28\linewidth}}
+\toprule
+Endpoint & VRRS choice & Validation-MAE-only choice \\
+\midrule
+\texttt{caco2\_efflux} & Chemprop D-MPNN & Chemprop D-MPNN \\
+\texttt{caco2\_papp} & Chemprop D-MPNN & RF \\
+\texttt{hlm\_clint} & RF & Chemprop D-MPNN \\
+\texttt{ksol} & GIN & Chemprop D-MPNN \\
+\texttt{logd} & Chemprop D-MPNN & Chemprop D-MPNN \\
+\texttt{mbpb} & LightGBM & Chemprop D-MPNN \\
+\texttt{mlm\_clint} & RF & Chemprop D-MPNN \\
+\texttt{mppb} & LightGBM & Chemprop D-MPNN \\
+\bottomrule
+\end{longtable}
+
+The VRRS choice differed from the MAE-only choice on 6/8 endpoints. Leave-one-
+seed stability agreed with the full five-seed VRRS choice in 33/40 comparisons
+(82.5\%). This is a validation-stage stability diagnostic from a post-hoc rule;
+no ExpansionRx test targets were read, and no unseen-test improvement or
+independent external validation is claimed.
+
+\section{Primary reliability dimensions}
+\begin{longtable}{p{0.29\linewidth}p{0.62\linewidth}}
+\toprule
+Dimension & Locked definition and interpretation \\
+\midrule
+ECE & Expected calibration error over ten equal-width probability bins for binary tasks. \\
+Brier & Mean squared probabilistic error for binary tasks. \\
+Coverage error & Absolute deviation from nominal 90\% residual-interval coverage for regression tasks; validation residuals are used, so this is a diagnostic rather than an independent conformal guarantee. \\
+Relative excess AURC & Risk-coverage area above a loss-ordered descriptive oracle, normalized by mean sample loss. \\
+Applicability alignment & Spearman association between maximum Morgan/Tanimoto support and negative absolute prediction error. \\
+\bottomrule
+\end{longtable}
+
+\section{Key numeric results}
+\begin{table}[ht]
+\centering
+\begin{tabular}{lrrrr}
+\toprule
+Dimension & Endpoints & Mean regret & 95\% CI & Practical / tie-robust \\
+\midrule
+ECE & 13 & 0.0325 & [0.0148, 0.0539] & 9/13; 6/13 \\
+Brier & 13 & 0.0092 & [0.0034, 0.0169] & 6/13; 2/13 \\
+Coverage error & 9 & 0.0179 & [0.0099, 0.0258] & 6/9; 6/9 \\
+Relative excess AURC & 22 & 0.0793 & [0.0401, 0.1251] & 15/22; 12/22 \\
+Applicability alignment & 22 & 0.1195 & [0.0739, 0.1770] & 15/22; 12/22 \\
+\bottomrule
+\end{tabular}
+\caption{Source-linked summaries from the locked reliability-regret tables.}
+\end{table}
+
+\section{Evidence and limitations}
+The retained core-matrix release gate reports 550/550 exact run keys and status
+\texttt{GO}. The formal CPU ledger was executed in the tracked remote research
+environment; the local Mac replay of the 330 traditional-model artifacts is a
+separate verification lane. The broad confirmatory external-cohort matrix
+remains unstarted because its outcome-blind power screen is
+\texttt{POWER\_FAIL\_HOLD}; the planned matrix therefore remains
+\texttt{0/150}, not a completed confirmatory result. A separate narrow CYP2D6
+rerun completed 10/10 prediction packages, but it is exploratory only:
+test-role metrics were examined before protocol freeze, and all ten rerun
+predictions were byte-identical to the earlier candidate outputs. Hash and
+arithmetic checks do not repair this prior exposure. The CYP2D6 diagnostic is
+excluded from confirmatory evidence and is limited to that endpoint and its two
+source cohorts. Raw TDC
+rows and model checkpoints are not redistributed in the
+public source package, so sanitized prediction views alone cannot reproduce
+label-dependent metrics.
+
+\section{Runtime environment and literature boundary}
+The verified formal neural environment was Linux x86\_64 with an NVIDIA A40,
+CUDA 12.8, Python 3.12.10, Chemprop 2.2.1, PyTorch 2.7.1+cu128, RDKit
+2026.09.1, and NumPy 2.5.4. The independent Mac replay used macOS 26.6 arm64,
+Python 3.11.15, scikit-learn 1.9.1, RDKit 2026.09.1, XGBoost 3.2.0, and
+LightGBM 4.7.0. The exact package inventory of the formal remote traditional
+CPU lane was not preserved in the local manifests and is not inferred. The
+full inventory and lane boundary are recorded in
+the repository environment inventory document.
+
+The closest cited studies differ in estimand. Zhao et al. evaluate
+challenge-specific ADMET reliability scenarios; Kamuntavičius et al. study
+representation/optimization and cross-source transfer; Zheng et al. study a
+structural-frontier split against a matched scaffold control. The present work
+freezes one audited TDC snapshot and reports validation-selection versus
+multi-dimensional held-out reliability regret. The comparison audit is
+recorded in the repository comparison audit.
+
+\section{Source inventory}
+The manuscript tables, figure manifests, cleaned-sensitivity outputs, cross-fit
+outputs, and reviewer-defense diagnostics are indexed under the corresponding
+results directories. The numeric audit and citation audit
+are copied into this paper directory for release-time hashing. All paths in the
+public release must remain relative and de-identified.
+
+\end{document}

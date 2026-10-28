@@ -1,0 +1,832 @@
+% Options for packages loaded elsewhere
+\PassOptionsToPackage{unicode}{hyperref}
+\PassOptionsToPackage{hyphens}{url}
+\documentclass[
+]{article}
+\usepackage{xcolor}
+\usepackage{graphicx}
+\usepackage{amsmath,amssymb}
+\setcounter{secnumdepth}{-\maxdimen} % remove section numbering
+\usepackage{iftex}
+\ifPDFTeX
+  \usepackage[T1]{fontenc}
+  \usepackage[utf8]{inputenc}
+  \usepackage{textcomp} % provide euro and other symbols
+\else % if luatex or xetex
+  \usepackage{unicode-math} % this also loads fontspec
+  \defaultfontfeatures{Scale=MatchLowercase}
+  \defaultfontfeatures[\rmfamily]{Ligatures=TeX,Scale=1}
+\fi
+\usepackage{lmodern}
+\ifPDFTeX\else
+  % xetex/luatex font selection
+\fi
+% Use upquote if available, for straight quotes in verbatim environments
+\IfFileExists{upquote.sty}{\usepackage{upquote}}{}
+\IfFileExists{microtype.sty}{% use microtype if available
+  \usepackage[]{microtype}
+  \UseMicrotypeSet[protrusion]{basicmath} % disable protrusion for tt fonts
+}{}
+\makeatletter
+\@ifundefined{KOMAClassName}{% if non-KOMA class
+  \IfFileExists{parskip.sty}{%
+    \usepackage{parskip}
+  }{% else
+    \setlength{\parindent}{0pt}
+    \setlength{\parskip}{6pt plus 2pt minus 1pt}}
+}{% if KOMA class
+  \KOMAoptions{parskip=half}}
+\makeatother
+\setlength{\emergencystretch}{3em} % prevent overfull lines
+\providecommand{\tightlist}{%
+  \setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
+\usepackage{bookmark}
+\IfFileExists{xurl.sty}{\usepackage{xurl}}{} % add URL line breaks if available
+\urlstyle{same}
+\hypersetup{
+  hidelinks,
+  pdfcreator={LaTeX via pandoc}}
+
+\title{An Auditable Reliability-Regret Profile\\
+for Retrospective ADMET QSAR Model Selection:\\
+A Fixed-Benchmark Study Across 22 Endpoints}
+\author{Huajian Jiang\\
+College of Computing and Data Science,\\
+Nanyang Technological University, Singapore\\
+Correspondence: jian0157@e.ntu.edu.sg\\
+ORCID: 0009-0001-3992-2286}
+\date{}
+
+\begin{document}
+
+\maketitle
+
+\subsection{Abstract}\label{abstract}
+
+ADMET model selection is often based on one validation metric, although
+predictive ranking, probability calibration, selective risk, residual
+coverage and chemical support can disagree. We define an auditable
+reliability-regret profile (RRP) that compares a family selected by a
+designated validation metric with a retrospective, non-deployable
+candidate-pool reference on prespecified reliability dimensions. The audit
+covers 22 TDC ADMET endpoints, five model families and five seeds (550 fits),
+with cleaning sensitivity, support-conditioned diagnostics and descriptive
+source-transport analyses. Mean regret was 0.0325 for expected calibration
+error, 0.0092 for Brier score, 0.0179 for coverage error, 0.0793 for relative
+excess area under the risk-coverage curve and 0.1195 for applicability
+alignment. Validation and reliability winners agreed in 4/13, 8/13, 2/9,
+2/22 and 4/22 comparisons, respectively. Isotonic calibration reduced
+expected calibration error on 13/13 classification endpoints, but Brier
+improvements were uncertain. The planned confirmatory external matrix was
+stopped by an outcome-blind power gate; the focused CYP2D6 analysis is
+retrospective and exploratory because test-role outcomes were examined before
+protocol freeze. The study supports multi-dimensional QSAR reliability
+auditing within this fixed benchmark; it does not establish independent
+external or temporal validity, deployment benefit, clinical utility or
+acceptance.
+
+\textbf{Keywords:} ADMET prediction; model selection; uncertainty
+quantification; calibration; applicability domain
+
+\subsection{1. Introduction}\label{introduction}
+
+Computational QSAR prediction of absorption, distribution, metabolism,
+excretion, and toxicity (ADMET) properties is used to prioritize
+compounds and support decisions during drug discovery. Public benchmark
+collections make it possible to compare models across endpoints, but the
+resulting score depends on the endpoint, data version, split, and
+evaluation metric. The Therapeutics Data Commons (TDC) was developed to
+organize therapeutic machine-learning datasets, tasks, data splits, and
+evaluation resources; its ADMET Group provides a common setting for
+multi-endpoint assessment \cite{huang2021tdc}.
+
+Because these are structure--property relationships, QSAR reliability also
+depends on chemical support, assay heterogeneity, and endpoint-specific
+calibration. A high predictive score alone therefore does not establish safe
+extrapolation to compounds outside the observed chemical domain.
+
+Many benchmark comparisons rank candidate models by a task-specific
+predictive metric. Such a metric is useful for comparing predictive
+ranking or error magnitude, but it does not by itself describe every
+property relevant to using predictions. For classification, ranking
+performance and probability calibration answer different questions: a
+model can order compounds well while its predicted probabilities remain
+poorly aligned with observed frequencies \cite{guo2017calibration}. In compound triage,
+performance under selective review and the relation between structural
+support and prediction error may also matter. These considerations
+motivate evaluating a validation-selected model across multiple
+reliability dimensions rather than treating its validation score as a
+complete account of test behaviour.
+
+We use these observations to define an auditable reliability-regret
+profile (RRP). For each endpoint, the RRP records the loss incurred by the
+family selected on validation for each prespecified reliability dimension,
+relative to the most favorable member of the locked candidate pool on the
+same held-out test partition. The reference is deliberately descriptive:
+it exposes the dimensions that a single validation score leaves unresolved
+without turning a test-set oracle into a deployable selector. The profile
+therefore combines a computationally simple estimator with explicit
+identity, split, seed, and provenance checks that can be rerun when the
+candidate pool or data snapshot changes.
+
+Recent work has already established several neighboring reliability questions. Hosni et al.~used a structural applicability-domain method with Venn--Abers or conformal uncertainty estimates to distinguish molecules for which uncertainty estimates were more versus less reliable under temporal, cluster, and industrial splits \cite{hosni2026}. Parrondo-Pizarro et al.~benchmarked chemical-distance, ensemble-variance, and error-model uncertainty metrics for ADME properties under temporal and controlled distribution shifts using separate training, calibration, and test roles \cite{parrondo2026}. Koleiev et al.~audited the top-ranked models across all 22 TDC ADMET leaderboards for reproducibility, leakage, and overfitting \cite{koleiev2026}. Castellanos et al.~analysed the prospective temporal-blind OpenADMET--ExpansionRx challenge and reported applicability-domain and error-tracking results; that work is a preprint and is cited here only as a complementary challenge report \cite{castellanos2026}. These studies delimit the present contribution: we do not introduce a new uncertainty estimator, calibration method, applicability-domain method, error model, temporal split, or reproducibility audit. The present contribution is the narrower reliability-regret selection audit and its evidence contract, which compares a validation-selected family with a retrospective candidate-pool reference across prespecified reliability dimensions.
+
+Earlier benchmarking also examined data scarcity, structural distribution
+shift, representation choice, data cleaning, cross-source transfer, and
+structural-frontier controls in ADMET evaluation \cite{zhao2026reliability,kamuntavicius2025benchmarking,zheng2026frontier}.
+
+Here, we conduct a retrospective audit of model selection and held-out
+reliability across 22 TDC ADMET endpoints. For each endpoint, we select
+one model family using the designated validation metric and compare that
+choice with the candidate family that has the most favorable value on
+each test-set reliability dimension. This test-set reference is a
+descriptive, candidate-pool counterfactual; it is not an implementable
+selection rule. The study therefore asks a bounded question: within this
+fixed benchmark and candidate pool, how closely does selection by the
+designated validation metric align with reliability measured on the
+corresponding fixed test set? The dataset roles are separated in the
+training code, but this analysis is not an independent external
+confirmation: the same benchmark test endpoints have been examined
+during prior development, and the primary TDC analysis used no
+independent calibration cohort. A separate descriptive
+transport diagnostic is reported in Section 2.8 and does not change this
+limitation.
+
+\subsection{2. Materials and Methods}\label{materials-and-methods}
+
+\subsubsection{2.1. Study design and benchmark
+tasks}\label{study-design-and-benchmark-tasks}
+
+This retrospective benchmark audit covered 22 ADMET tasks in five
+categories: absorption, distribution, metabolism, excretion, and
+toxicity. Thirteen tasks were binary classification and nine were
+regression. Endpoint metadata defined each task's designated metric. The
+locked matrix comprised five model families and five random seeds (1-5)
+for each endpoint, corresponding to 550 endpoint-model-seed fits. This primary TDC analysis evaluates model-family selection and
+test-set reliability; it is not a prospective or clinical evaluation. A
+separate source-specific external transport diagnostic is described
+below and kept outside the primary TDC matrix.
+
+The formal runs described in this draft used a PyTDC 1.1.15 data
+snapshot staged on the remote compute system and audited as a distinct
+data version. The earlier \texttt{full\_003} snapshot was unavailable
+during this run and was not merged with the newer snapshot. Accordingly,
+the data version in this manuscript must be reported as the audited
+PyTDC 1.1.15 snapshot, not as an exact reproduction of the unavailable
+historical run. Raw TDC records are not redistributed in the
+public project package; data access remains subject to the source
+dataset terms.
+
+\subsubsection{2.2. Data identity and split
+protocol}\label{data-identity-and-split-protocol}
+
+For each endpoint, the analysis loaded the cached
+\texttt{train\_val.csv} and \texttt{test.csv} files. For each seed, only
+the \texttt{train\_val} partition was randomly divided into training and
+validation subsets using scikit-learn \texttt{train\_test\_split} with
+\texttt{test\_size=0.125}, shuffling enabled, and \texttt{random\_state}
+equal to the task seed. Classification labels were used for
+stratification; regression labels were not. This produced a nominal 7:1
+training-to-validation split within the cached non-test rows. The cached
+test membership and row order were retained and were not repartitioned.
+The same task-seed split identities were used across all five model
+families.
+
+The split name \texttt{locked\_cache} denotes this explicit portable
+protocol. It does not assert that the validation subset reproduces a
+version-specific PyTDC default split or that validation is
+scaffold-disjoint. The manuscript also does not label the cached test
+set as scaffold-disjoint until the source-level provenance of that exact
+snapshot has been verified. The test set was excluded from model
+fitting, checkpoint selection, and calibration fitting. It was used for
+final model evaluation and for constructing the descriptive
+candidate-pool reliability reference. Because the same test endpoints
+had been inspected during prior project development, the analysis is
+retrospective and not a blinded confirmatory evaluation.
+
+Two legacy pyridine N-oxide SMILES in the \texttt{Solubility\_AqSolDB}
+source file required parser-compatibility translations under the current
+RDKit runtime. The original source strings, labels, row indices, split
+assignments, and prediction identities were retained. Only the private
+strings passed to model parsers were translated under a finite, audited
+mapping; no additional row was dropped, duplicated, relabelled, or
+reassigned under this policy.
+
+\subsubsection{2.3. Candidate model families and
+training}\label{candidate-model-families-and-training}
+
+The candidate pool comprised a random forest (RF), XGBoost, LightGBM, a
+graph isomorphism network (GIN), and Chemprop's directed message-passing
+neural network (D-MPNN) \cite{rogers2010ecfp,xu2019gnn,yang2019molecular,breiman2001rf,chen2016xgboost,ke2017lightgbm}.
+The historical custom node-message-passing implementation was excluded
+from the formal candidate pool and was not treated as Chemprop D-MPNN.
+
+RF, XGBoost, and LightGBM used binary Morgan fingerprints generated with
+radius 2 and 2,048 bits \cite{rogers2010ecfp}. RF used 500 trees, maximum depth 20,
+minimum split size 5, and minimum leaf size 2; classification runs used
+balanced-sub-sample class weights. XGBoost and LightGBM used 1,000
+boosting iterations, maximum depth 6, learning rate 0.01, and
+configuration values of 0.8 for row and feature subsampling. In the
+locked LightGBM implementation, \texttt{subsample\_freq=0} disables row
+bagging despite the \texttt{subsample=0.8} field, while feature
+subsampling remains configured. No broad hyperparameter search
+was conducted for this matrix; model configurations were fixed in the
+project code and configuration files.
+
+GIN operated on molecular graphs with 117-dimensional atom features
+encoding atomic number, degree, formal charge, and hybridization. The
+model used five trainable-epsilon GIN layers, hidden dimension 256, sum
+pooling, and dropout 0.2. It was trained for up to 100 epochs with Adam
+(learning rate 0.001; weight decay 0.00001), unweighted binary
+cross-entropy for classification, and unscaled mean squared error for
+regression. Early stopping was applied after 20 validation checks
+without improvement \cite{xu2019gnn}.
+
+Chemprop D-MPNN runs used Chemprop 2.2.1 with directed bond messages,
+message hidden dimension 300, depth 3, zero dropout, normalized
+aggregation with normalization constant 100, and a one-layer
+feed-forward network with hidden dimension 300. Training was limited to
+100 epochs with patience 20, two warm-up epochs, and batch size 64. The
+per-run configuration records the selected validation metric and runtime
+environment \cite{yang2019molecular}. These Chemprop settings refer to the formal
+Chemprop implementation; parameters from the legacy custom
+message-passing runner are not used to describe this model.
+
+\subsubsection{2.4. Checkpointing and validation-based family
+selection}\label{checkpointing-and-validation-based-family-selection}
+
+Each endpoint-model-seed fit used its seed-specific training and
+validation rows. The traditional estimators were fit once using their
+locked configurations. For GIN and Chemprop, the checkpoint within a run
+was selected using the task's configured validation metric and the
+corresponding direction of optimisation. For these neural models,
+classification checkpoint selection used AUROC or AUPRC; regression
+checkpoint selection used MAE or Spearman correlation, except as noted
+for Chemprop. Chemprop 2.2.1 did not track Spearman for checkpoint
+selection, so its checkpoints on Spearman-designated tasks were selected
+using validation MAE; final validation and test reporting for those runs
+used the designated Spearman metric. This implementation-specific
+difference is retained as a limitation of the candidate comparison.
+
+For family selection, the designated metric was recomputed from each
+seed's validation predictions, oriented so that larger values
+represented better performance, and averaged arithmetically over the
+five seeds. The family with the highest mean validation score was
+selected for that endpoint. Validation rows were not pooled by row index
+across seeds because each seed produced a different validation
+partition. Near-tie membership and seed-bootstrap selection stability
+were recorded separately from the winning-family rule.
+
+\subsubsection{2.5. Test predictions and reliability
+measures}\label{test-predictions-and-reliability-measures}
+
+After family selection, the five seed-specific test predictions for each
+eligible family were aligned by source sample identity. The per-compound
+ensemble prediction was the arithmetic mean across seeds; ensemble
+uncertainty was the sample standard deviation of those predictions. The
+test labels were not used to select the validation winner. Test-set
+reliability measures were calculated for every candidate family before
+the selected-family value was compared with the most favorable candidate
+value for the corresponding endpoint and reliability dimension.
+
+Classification reliability included the Brier score, log loss, and
+expected calibration error (ECE). ECE used ten equal-width probability
+bins over {[}0, 1{]}. Regression reliability included empirical coverage
+error for a nominal 90\% absolute-residual interval: a
+finite-sample-corrected upper quantile of validation absolute residuals
+(alpha=0.1) was estimated and applied to test predictions. Because
+validation data were also used for checkpointing and family selection,
+this interval is reported as a validation-residual coverage diagnostic
+and not as an independent calibration result or an unconditional
+conformal-coverage guarantee.
+
+Selective-prediction behaviour was summarized with risk-coverage curves
+that ordered compounds from lower to higher ensemble uncertainty.
+Per-sample loss was Brier score and log loss for classification and
+absolute error for regression. The area under the risk-coverage curve
+(AURC) was compared with a loss-ordered oracle curve; excess AURC was
+divided by the mean sample loss to obtain relative excess AURC. Ties in
+uncertainty were handled by their expected within-tie ordering,
+independent of input row order. The loss-ordered oracle is used only to
+define a descriptive reference.
+
+Applicability support was measured as each test compound's maximum
+Tanimoto similarity to the endpoint's training compounds using radius-2,
+2,048-bit Morgan fingerprints. Applicability alignment was the Spearman
+correlation between this maximum similarity and negative absolute
+prediction error; higher values indicate that more-supported test
+compounds tended to have lower errors in this benchmark.
+
+\paragraph{Reliability-regret profile.}
+Let $e$ index endpoints, $m$ index the locked candidate families, and
+$d$ index reliability dimensions. Let $V_{e,m}$ be the mean validation
+score over the five seeds after orienting the metric so that larger is
+better, and let $L_{e,m,d}$ be the corresponding test loss after
+reorienting higher-is-better reliability measures as losses. The
+validation-selected family is
+\[
+\hat m_e = \arg\max_m V_{e,m},
+\]
+with the frozen family order resolving exact ties. The dimension-specific
+regret is
+\[
+R_{e,d}=L_{e,\hat m_e,d}-\min_m L_{e,m,d},
+\]
+and the range-normalized profile is
+\[
+\widetilde R_{e,d}=\frac{R_{e,d}}
+{\max_m L_{e,m,d}-\min_m L_{e,m,d}+\epsilon},
+\]
+where $\epsilon$ prevents division by zero. The output is the vector
+$\mathbf R_e=(R_{e,d})_d$ together with the candidate availability,
+sample-identity audit, seed-level values, and endpoint-level uncertainty.
+This estimator is a diagnostic of selection completeness: it does not
+estimate a population effect, and the minimizing family is never used as a
+future-data selection rule. Support-conditioned and selective-risk
+analyses are attached to the same endpoint-level profile rather than
+pooled across compounds.
+
+For each endpoint and reliability dimension, the reliability regret was
+the non-negative difference between the validation-selected family's
+reliability loss and the lowest reliability loss observed among the
+eligible candidate families on the test set. Higher-is-better dimensions
+were reoriented as losses before this comparison. The test-set oracle is
+an after-the-fact candidate-pool reference and cannot be used to select
+a model for future compounds. Raw and range-normalized regret, tie-aware
+summaries, and regret relative to uniform random selection were retained
+in the analysis outputs. Dimension-specific practical tolerances and the
+combined evidence gate are code-defined analysis criteria, not
+prospectively registered hypotheses.
+
+\subsubsection{2.6. Statistical summaries}\label{statistical-summaries}
+
+The endpoint was the aggregation unit for cross-task summaries. For the
+support-conditional analyses, model-task contrasts were first averaged
+within endpoint; endpoint means were then used for the reported means,
+percentile 95\% bootstrap intervals, sign-flip diagnostics, and
+endpoint-positive counts. The \texttt{n\_pairs} field in the source
+table counts eligible model-task contrasts before this endpoint
+aggregation. Percentile 95\% intervals for mean regret summaries were
+obtained by 5,000 bootstrap resamples of endpoint-level values;
+validation-family selection stability used 1,000 resamples of the five
+seeds. Monte Carlo sign-flip p-values used 20,000 repetitions with Holm
+adjustment across reliability dimensions. Since regret is non-negative
+by construction relative to a test-set oracle, these p-values are
+retained as descriptive diagnostics and are not used by the evidence
+gate. TDC endpoints may share compounds or source lineage, so
+endpoint-bootstrap intervals are descriptive summaries of this fixed
+task set and should not be interpreted as population-level inference
+over independent assays.
+
+\subsubsection{2.7. Reproducibility and data
+access}\label{reproducibility-and-data-access}
+
+The formal analysis uses explicit split identifiers, seed-specific
+prediction files, and task/model run manifests. Prediction audits check
+sample identity, row order, and label alignment, while per-run records
+preserve model identifiers, seeds, and artifact hashes. GIN and Chemprop
+formal fits used NVIDIA A40 GPUs; the Chemprop manifests record Python
+3.12.10, Chemprop 2.2.1, PyTorch 2.7.1+cu128, RDKit 2026.09.1, NumPy
+2.5.4, and CUDA 12.8. The formal five-model ledger was executed in the
+tracked remote research environment. The local Mac was used for document
+preparation, figure rendering, an independent replay audit of the 330
+traditional-model artifacts, and the descriptive external diagnostics,
+including the 120-fit traditional lane and the B3DB inference lanes; the Mac
+replay is a verification lane and is not substituted for the primary ledger.
+The Mac replay
+environment was macOS 26.6 arm64 with Python 3.11.15, scikit-learn
+1.9.1, RDKit 2026.09.1, XGBoost 3.2.0, and LightGBM 4.7.0. The retained
+local manifests do not contain a complete package-version inventory for
+the formal remote traditional CPU lane, so those versions are not
+inferred or claimed; the full inventory is recorded in
+\texttt{docs/CPU\_ENVIRONMENT\_INVENTORY\_20261021.md}.
+The source package does not contain raw TDC records or model
+checkpoints, so released prediction views and hashes alone cannot
+independently reproduce label-dependent metrics; exact replay requires
+an authorized matching TDC snapshot and the documented split protocol.
+
+\subsubsection{2.8. Descriptive external transport
+diagnostic}\label{descriptive-external-transport-diagnostic}
+
+The separate diagnostic covered eight cohort-source combinations aligned
+to four TDC classification tasks. For each cohort, RF, XGBoost, and
+LightGBM were trained only on the corresponding locked TDC development
+rows (\texttt{train\ +\ valid}), with five task seeds. External records
+were divided into a calibration role and a sealed test role using the
+frozen identity assignment; Platt and isotonic transforms were fit on
+the calibration role, and the sealed test role was used only for
+evaluation. We report source-by-model metrics as five-seed means and
+standard deviations, without pooling cohorts or treating seeds as
+independent external replicates.
+
+Locked-checkpoint inference added 20 GIN prediction files across four
+source-endpoint cohorts and 10 Chemprop prediction files across two
+hERG source cohorts. External labels were not used for fitting or
+checkpoint selection in these neural-model diagnostics; they remain
+descriptive transport observations.
+
+An independent B3DB diagnostic was kept in a separate ledger. After exclusion
+of identities overlapping the locked TDC snapshot and the frozen v3 external
+cohorts, the candidate contained 1,078 connectivity-deduplicated identities,
+with 390 records assigned to calibration and 688 to sealed test. The B3DB
+ledger comprised RF, XGBoost, and LightGBM fits for five seeds (15 files) and
+locked GIN and Chemprop inference for five seeds each (10 files). B3DB labels
+were not used for model fitting or checkpoint selection.
+
+The planned confirmatory external analysis required a separate 150-fit
+matrix and a prespecified outcome-blind power gate. That gate did not pass,
+and the B3DB candidate's outcome-blind log-loss power screen also failed
+(power 0.118 for a +0.010 log-loss effect under the prespecified simulation),
+so neither descriptive diagnostic is a substitute for the unrun confirmatory
+analysis.
+
+\subsubsection{2.9. Validation-only ExpansionRx replication}\label{validation-only-expansionrx-replication}
+
+To assess whether validation-stage family selection was sensitive to a
+source-specific replication, we ran a post-hoc analysis on eight regression
+endpoints from the public ExpansionRx replication package. The analysis
+included five candidate families (RF, XGBoost, LightGBM, GIN, and Chemprop
+D-MPNN), five seeds per family, and therefore 200 model slots. Models were
+trained and scored only on the replication package's development and
+validation roles. The validation-reliability selector (VRRS) combined equal
+within-endpoint rank scores for validation MAE and the Spearman association
+between maximum Morgan similarity to the seed-specific training set and
+negative absolute validation error. Exact ties were resolved alphabetically.
+
+The selector protocol was written after the replication execution and is
+therefore explicitly post-hoc rather than preregistered. The selection table
+and its leave-one-seed stability analysis were written before any test-target
+directory was opened. No ExpansionRx test targets were available to this
+analysis, so this replication cannot estimate unseen-test performance or
+validate the selector as a deployable rule.
+
+\subsubsection{2.10. Exploratory CYP2D6 diagnostic}\label{exploratory-cyp2d6-diagnostic}
+
+A focused CYP2D6 diagnostic was run for the endpoint
+\texttt{CYP2D6\_Veith}, and the model family was XGBoost selected solely from
+the locked TDC validation table, using five seeds and two source cohorts (EPA
+Tox21 and NCATS/NCGC). Each model was fit only on the locked TDC
+train-plus-validation rows. However, the same source-specific test-role
+metrics had already been reported in a diagnostic before the focused protocol
+was frozen, and all ten later rerun prediction files were byte-identical to
+the earlier candidate files. The test roles therefore were not untouched for
+confirmatory inference.
+
+For audit traceability, the diagnostic estimand was uncalibrated test log loss
+minus Platt-calibrated test log loss, summarized as the equal-weight mean of
+the two source-level means across seeds. Input, hash, and arithmetic checks
+pass, but they do not repair prior test-role exposure. The result is retained
+as exploratory only and supports no confirmatory CYP2D6 calibration or
+transport claim.
+
+\subsubsection{2.11. AI-assisted preparation and
+accountability}\label{ai-assisted-preparation-and-accountability}
+
+Generative AI assisted with study-code development and review, literature and
+evidence organisation, document preparation, and language editing. Before
+submission, the author will identify each tool and version and specify its
+actual role in accordance with the journal policy. AI systems were not treated
+as authors or scientific authorities. The human author will independently
+verify the code, analyses, references, and manuscript and retains responsibility
+for the accuracy, integrity, and interpretation of the submitted work.
+
+\subsection{3. Results}\label{results}
+
+\subsubsection{3.1. Analysis coverage and artifact
+completion}\label{analysis-coverage-and-artifact-completion}
+
+The final matrix covered all 22 endpoints, all five candidate families,
+and five seeds per family, corresponding to 550 fit slots. The
+reliability-regret manifest reported exact task, model, seed, and
+sample-identity coverage, with 79 applicable endpoint-dimension cells
+and 31 task-type-inapplicable cells out of 110 grid cells. The final
+figure suite included the five-model matrix for the
+conditional-reliability and calibration analyses. A separate
+paired cleaning sensitivity analysis contained 120 runs across eight
+endpoints and three traditional model families; its source, run, and
+prediction audits passed, and the summary gate was
+\texttt{SENSITIVITY\_STABLE}.
+
+\subsubsection{3.2. Reliability regret after validation-based
+selection}\label{reliability-regret-after-validation-based-selection}
+
+Validation-selected models showed non-zero reliability regret across
+multiple dimensions. Mean ECE regret was 0.0325 (95\% CI, 0.0148-0.0539)
+across 13 classification endpoints, with a practically meaningful regret
+on 9/13 endpoints. Mean Brier regret was 0.0092 (95\% CI,
+0.0034-0.0169), with meaningful regret on 6/13 endpoints. For the nine
+regression endpoints with coverage diagnostics, mean coverage-error
+regret was 0.0179 (95\% CI, 0.0099-0.0258), with meaningful regret on
+6/9 endpoints. Across all 22 endpoints, mean relative excess-AURC regret
+was 0.0793 (95\% CI, 0.0401-0.1251) and mean applicability-alignment
+regret was 0.1195 (95\% CI, 0.0739-0.1770); both dimensions had
+meaningful regret on 15/22 endpoints, and the tie-robust counts were
+12/22 for each dimension.
+
+\subsubsection{3.3. Agreement between validation selection and
+reliability
+winners}\label{agreement-between-validation-selection-and-reliability-winners}
+
+The validation-selected family and the test-set reliability winner often
+differed. Exact winner agreement was 4/13 endpoints for uncalibrated
+ECE, 8/13 for uncalibrated Brier score, 2/9 for coverage error, 2/22 for
+selective-prediction gain, and 4/22 for applicability alignment. The
+corresponding mismatch fractions were 69.2\%, 38.5\%, 77.8\%, 90.9\%,
+and 81.8\%, respectively. These values are candidate-pool comparisons
+made after observing the fixed test set; they do not define a deployable
+test-set selection rule.
+
+\subsubsection{3.4. Reliability conditional on chemical
+support}\label{reliability-conditional-on-chemical-support}
+
+At the primary maximum-similarity threshold of 0.5, the
+outside-to-inside log-error ratio was positive for 20/21 eligible
+endpoints, with a mean of 0.2654 (95\% CI, 0.1960-0.3390). The source
+table contains 105 eligible model-task contrasts for this measure;
+estimates and intervals are based on endpoint means after averaging
+available model-task contrasts within each endpoint. The
+uncertainty-correlation advantage for supported compounds was positive
+for 14/21 endpoints, with a mean of 0.0850 (95\% CI, 0.0420-0.1314). The
+selective-gain contrast was heterogeneous and centered below zero (mean
+-0.0407; 95\% CI, -0.0939 to 0.0005). For the 12 classification
+endpoints with the calibration contrast, the Brier gap was positive for
+11/12 endpoints (mean 0.0398; 95\% CI, 0.0241-0.0567), whereas the ECE
+gap was near zero (mean -0.0009; 95\% CI, -0.0147 to 0.0118).
+
+\subsubsection{3.5. Calibration and cleaning
+sensitivity}\label{calibration-and-cleaning-sensitivity}
+
+Isotonic calibration reduced ECE on all 13 classification endpoints,
+with a mean ECE reduction of 0.0221 (95\% CI, 0.0155-0.0294; exploratory
+Holm-adjusted sign-flip p=0.0010). The corresponding Brier reduction was
+small and uncertain (mean 0.0010; 95\% CI, -0.0015 to 0.0037). Platt
+scaling showed no similarly consistent endpoint-level ECE or Brier
+improvement in these summaries. In the cleaning sensitivity
+analysis, the selected traditional-model winner changed for BBB\_Martins
+and PPBR\_AZ, but no task met the gate's material-effect criterion; the
+overall status was \texttt{SENSITIVITY\_STABLE} and the prediction audit
+status was \texttt{GO}.
+
+\subsubsection{3.6. Descriptive external transport
+diagnostic}\label{descriptive-external-transport-diagnostic-1}
+
+The first transport diagnostic completed 120 traditional-model fits across
+eight cohort-source combinations, three model families, and five seeds.
+Locked-checkpoint inference added 20 GIN prediction files and 10 Chemprop
+prediction files on selected source-endpoint cohorts. Models were fit only on
+TDC development rows; external calibration and test roles were kept separate,
+and calibration transforms were fit on the calibration role alone. A separate
+B3DB diagnostic completed 15 traditional-model fits and 10 locked neural
+prediction files on 1,078 connectivity-deduplicated identities, with 390
+calibration and 688 sealed-test records. The supplementary source-by-model
+tables report metrics as means and standard deviations across the five seeds,
+without pooling cohorts or treating seeds as independent external replicates.
+The outcome-blind power screen for the planned confirmatory external analysis
+did not pass, and the B3DB candidate power screen was also below the
+prespecified threshold; the 150-fit broad confirmatory matrix therefore
+remained at \texttt{0/150 POWER\_FAIL\_HOLD}. The focused CYP2D6 diagnostic
+is reported separately in Section~3.8 because its test-role outcomes were
+examined before protocol freeze; it is excluded from confirmatory external
+evidence.
+
+\subsubsection{3.7. Validation-only ExpansionRx replication}\label{validation-only-expansionrx-results}
+
+The ExpansionRx replication completed all 200 planned model slots across
+eight regression endpoints, five model families, and five seeds. VRRS selected
+Chemprop D-MPNN for \texttt{caco2\_efflux}, \texttt{caco2\_papp}, and
+\texttt{logd}; RF for \texttt{hlm\_clint} and \texttt{mlm\_clint}; GIN for
+\texttt{ksol}; and LightGBM for \texttt{mbpb} and \texttt{mppb}. The VRRS
+choice differed from the validation-MAE-only choice on 6/8 endpoints. The
+leave-one-seed stability diagnostic agreed with the full VRRS choice in 33/40
+comparisons (82.5\%). Because the test-target directory was not provided, no
+post-freeze external test comparison was performed. The result supports only
+validation-stage selector stability within this source-specific replication.
+
+\subsubsection{3.8. Exploratory CYP2D6 diagnostic}\label{exploratory-cyp2d6-results}
+
+The CYP2D6 diagnostic completed 10/10 XGBoost seed packages across the EPA
+Tox21 and NCATS/NCGC source cohorts. The exploratory equal-weight source-level
+paired log-loss improvement was 0.1630 (95\% source-stratified bootstrap CI,
+0.1521--0.1739; 12,545 test rows); the pooled row-weighted summary was 0.1585.
+These metrics are reported only to preserve the diagnostic record: they were
+examined before the focused protocol freeze, and the later prediction files
+were byte-identical to the earlier candidate outputs. They are not
+confirmatory external evidence.
+
+\subsubsection{3.9. Figures and source
+files}\label{figures-and-source-files}
+
+Figure 1 summarizes validation-selected reliability regret across the
+five reliability dimensions; the colour scale is normalized regret and
+the markers encode the locked practical and tie-robust thresholds.
+Figure 2 shows conditional reliability contrasts by maximum training-set
+similarity at the primary threshold of 0.5. Figure 3 reports
+endpoint-level calibration gains and failures for isotonic and Platt
+scaling. Editable SVG, publication PDF, PNG, and source-data files are
+retained in the corresponding \texttt{results/figures/} directories,
+with hashes recorded in the figure manifests.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.98\linewidth]{figures/fig01_validation_selected_reliability_regret.png}
+\caption{Validation-selected reliability regret across the five audited
+dimensions and 22 ADMET endpoints. Values and endpoint coverage are linked to
+the final reliability-regret manifest.}
+\label{fig:reliability-regret}
+\end{figure}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.98\linewidth]{figures/fig02_conditional_reliability.png}
+\caption{Conditional reliability contrasts by maximum training-set similarity
+at the primary threshold of 0.5. The contrasts are descriptive endpoint-level
+summaries and are not prospective performance guarantees.}
+\label{fig:conditional-reliability}
+\end{figure}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.98\linewidth]{figures/fig03_calibration_gains_failures.png}
+\caption{Endpoint-level calibration gains and failures for isotonic and Platt
+scaling. The calibration analysis is internal to the fixed benchmark and does
+not establish an independent calibration cohort.}
+\label{fig:calibration-gains}
+\end{figure}
+
+\subsection{4. Discussion}\label{discussion}
+
+This audit shows that a validation metric can identify a reasonable
+predictive family without identifying the family that is best on every
+reliability dimension of the fixed held-out set. The largest and most
+recurrent mismatches involved selective prediction and applicability
+alignment, while Brier-score agreement was higher than agreement for
+those dimensions. The result is therefore a warning against treating one
+validation score as a complete proxy for how uncertainty, calibration,
+and chemical support behave across an endpoint.
+
+The conditional analysis gives a more specific interpretation.
+Lower-support compounds generally had larger errors and weaker
+support-error relationships, but the selective-prediction contrast was
+not uniformly favorable. Calibration was also dimension-specific:
+isotonic scaling improved ECE consistently in this benchmark, while
+Brier improvements were not stable. These patterns argue for reporting
+several reliability dimensions together and for distinguishing a
+descriptive benchmark audit from an operationally validated
+model-selection procedure.
+
+The methodological contribution is the reliability-regret profile and its
+reproducible audit contract: validation selection, dimension-specific test
+losses, support-conditioned diagnostics, seed aggregation, and artifact
+lineage are reported as one separable object. This is a computational
+evaluation framework rather than a new molecular architecture, chemical
+split, or claim of superiority over the closest recent ADMET reliability
+studies. The full-text comparison in
+\texttt{docs/NEAR\_NEIGHBOR\_COMPARISON\_20261020.md} and the 2026 full-text audit record the narrower estimand and the split/model differences that limit direct comparison. In particular, the present RRP is complementary to applicability-domain and uncertainty-under-shift studies, ADME uncertainty benchmarks, TDC reproducibility audits, and the prospective OpenADMET--ExpansionRx challenge; it does not supersede or reproduce those studies.
+
+The validation-only ExpansionRx replication adds a source-specific stability
+check for the selection procedure, but it does not change the estimand of the
+primary audit. Its post-hoc VRRS rule and the absence of test targets mean that
+the result is best treated as an implementation and sensitivity diagnostic,
+not as a new model-selection algorithm or an external generalization result.
+
+\subsection{5. Limitations}\label{limitations}
+
+First, the main analysis uses a fixed public benchmark and an internally
+held-out test partition. The focused CYP2D6 rerun passed input, artifact-hash,
+and numeric checks but is exploratory because test-role metrics were examined
+before protocol freeze. The broader confirmatory external matrix was held
+after its outcome-blind power screen failed, and the B3DB candidate also
+failed its log-loss power gate; no temporal cohort or confirmatory external
+analysis is available to establish general transportability or deployment
+validity. The ExpansionRx replication is limited to validation rows, was
+analyzed with a post-hoc selector, and has no test-target comparison. Second,
+endpoints
+and external sources may share compounds or source lineage;
+endpoint-level bootstrap intervals and seed summaries are descriptive
+and do not represent independent assay-level sampling. Third, the
+test-set reliability oracle is an after-the-fact candidate-pool
+reference and is not an implementable model-selection rule. Fourth,
+several practical thresholds and the combined gate were defined in code
+during analysis development rather than registered prospectively. Fifth,
+Chemprop used a validation-MAE checkpoint proxy on Spearman-designated
+tasks because the implementation did not track Spearman for
+checkpointing. Finally, the public package does not redistribute the raw
+TDC rows or checkpoints, exact remote traditional-CPU package versions
+were not retained in the local manifests, and exact replay requires an
+authorized matching snapshot and environment.
+
+\subsection{6. Conclusions}\label{conclusions}
+
+Across 22 fixed TDC ADMET endpoints, validation-based family selection
+and held-out reliability were frequently misaligned, particularly for
+selective prediction and applicability alignment. The results support a
+multi-dimensional reliability audit as a complement to conventional
+validation scores. The validation-only ExpansionRx replication shows that a
+multi-dimensional selector can remain stable across held-out seeds in a
+source-specific development package, but it does not establish external
+performance. No confirmatory external calibration/transport result
+is established: the CYP2D6 diagnostic is exploratory because of prior
+test-role exposure, and the broader outcome-blind power gate failed. The
+overall evidence remains retrospective and scope-bounded; new, untouched,
+adequately powered external cohorts are required before stronger
+transportability claims.
+
+\subsection{7. Declarations and submission
+fields}\label{declarations-and-submission-fields}
+
+The confirmed submission facts are: Huajian Jiang is the sole, first and
+corresponding author; correspondence is through jian0157@e.ntu.edu.sg;
+ORCID is 0009-0001-3992-2286; no funding was received; the author reports
+no relevant financial or non-financial competing interests; acknowledgements
+are none; and ethics approval and informed consent are not applicable because
+this retrospective computational study uses public chemical and assay data
+and involves no human participants, identifiable personal data, or human
+materials. CRediT contributions are: Conceptualization; Data curation;
+Formal analysis; Investigation; Methodology; Software; Validation;
+Visualization; Writing -- original draft; and Writing -- review and editing.
+The exact AI tools, versions and dates, and the final data/code release route
+still require final author confirmation before submission. AI systems were not
+authors and the human author remains responsible for every scientific claim,
+analysis, reference, and declaration.
+
+\subsection{References}\label{references}
+
+\begin{thebibliography}{15}
+\bibitem{huang2021tdc}
+  Huang K, Fu T, Gao W, Zhao Y, Roohani Y, Leskovec J, Coley CW, Xiao C,
+  Sun J, Zitnik M. Therapeutics Data Commons: Machine Learning Datasets
+  and Tasks for Drug Discovery and Development. \emph{Proceedings of the
+  Neural Information Processing Systems Track on Datasets and
+  Benchmarks}. 2021.
+\bibitem{guo2017calibration}
+  Guo C, Pleiss G, Sun Y, Weinberger KQ. On Calibration of Modern Neural
+  Networks. \emph{Proceedings of the 34th International Conference on
+  Machine Learning}. 2017;70:1321-1330.
+\bibitem{zhao2026reliability}
+  Zhao D, Zhu Y, Wu Z, Wan Y, Liu X, Li S, Xu H, Hou T, Hsieh C-Y.
+  Revisiting ADMET prediction reliability under real-world challenges in
+  the foundation model era. \emph{Journal of Cheminformatics}.
+  2026;18:95. https://doi.org/10.1186/s13321-026-01217-2.
+\bibitem{kamuntavicius2025benchmarking}
+  Kamuntavičius G, Paquet T, Bastas O, Šalkauskas D, Prat A, Abdel Aty
+  H, Pabrinkis A, Norvaišas P, Tal R. Benchmarking ML in ADMET
+  predictions: the practical impact of feature representations in
+  ligand-based models. \emph{Journal of Cheminformatics}. 2025;17.
+  https://doi.org/10.1186/s13321-025-01041-0.
+\bibitem{zheng2026frontier}
+  Zheng J, Guo C, Wang Z, Liu X, Chen H. Beyond Scaffold Splits:
+  Structural-Frontier Evaluation Reveals Hidden Failures in ADMET
+  Models. arXiv:2607.10729, version 4, 2026.
+  https://doi.org/10.48550/arXiv.2607.10729.
+\bibitem{hosni2026}
+  Hosni Z, Gillet VJ, Marchese Robinson RL. Explicit Applicability Domain
+  Calculations Can Help Determine When Uncertainty Estimates Are Less
+  Reliable. \emph{ACS Omega}. 2026;11(3):4722-4743.
+  https://doi.org/10.1021/acsomega.5c11875.
+\bibitem{parrondo2026}
+  Parrondo-Pizarro R, Lanini J, Rodríguez-Pérez R. Uncertainty Quantification
+  in Molecular Machine Learning for Property Predictions under Data Shifts.
+  \emph{Journal of Chemical Information and Modelling}. 2026;66(2):923-935.
+  https://doi.org/10.1021/acs.jcim.5c02381.
+\bibitem{koleiev2026}
+  Koleiev I, Stratiichuk R, Shevchuk N, Melnychenko M, Nyporko A, Todoryshyn
+  D, Husak V, Starosyla S, Yesylevskyy S, Nafiiev A. An End-User Audit of
+  Reproducibility, Data Leakage, and Overfitting of the Top-Ranked ADMET
+  Prediction Models in TDC Leaderboards. \emph{Journal of Chemical
+  Information and Modelling}. 2026;66(14):8045-8058.
+  https://doi.org/10.1021/acs.jcim.6c00819.
+\bibitem{castellanos2026}
+  Castellanos MA, MacDermott-Opeskin H, Ainsley J, Swain JA, Colby S, West D,
+  et al. Assessing the State of the Art in ADMET Prediction: Lessons from the
+  OpenADMET-ExpansionRx Community Blind Challenge. \emph{ChemRxiv}. 2026;
+  version 3, 5 October 2026. https://doi.org/10.26434/chemrxiv.15009342/v3.
+  Preprint; not peer reviewed.\bibitem{rogers2010ecfp}
+  Rogers D, Hahn M. Extended-connectivity fingerprints. \emph{Journal of
+  Chemical Information and Modelling}. 2010;50(5):742-754.
+  https://doi.org/10.1021/ci100050t.
+\bibitem{xu2019gnn}
+  Xu K, Hu W, Leskovec J, Jegelka S. How Powerful are Graph Neural
+  Networks? \emph{International Conference on Learning Representations}.
+  2019.
+\bibitem{yang2019molecular}
+  Yang K, Swanson K, Jin W, Coley C, Eiden P, Gao H, Guzman-Perez A,
+  Hopper T, Kelley B, Mathea M, Palmer A, Settels V, Jaakkola T, Jensen
+  K, Barzilay R. Analyzing Learned Molecular Representations for
+  Property Prediction. \emph{Journal of Chemical Information and
+  Modelling}. 2019;59(8):3370-3388.
+  https://doi.org/10.1021/acs.jcim.9b00237.
+\bibitem{breiman2001rf}
+  Breiman L. Random forests. \emph{Machine Learning}. 2001;45:5-32.
+  https://doi.org/10.1023/A:1010933404324.
+\bibitem{chen2016xgboost}
+  Chen T, Guestrin C. XGBoost: A Scalable Tree Boosting System. In:
+  \emph{Proceedings of the 22nd International Conference on Knowledge
+  Discovery and Data Mining}. 2016:785-794.
+  https://doi.org/10.1145/2939672.2939785.
+\bibitem{ke2017lightgbm}
+  Ke G, Meng Q, Finley T, Wang T, Chen W, Ma W, Ye Q, Liu TY. LightGBM:
+  A Highly Efficient Gradient Boosting Decision Tree. \emph{Advances in
+  Neural Information Processing Systems}. 2017;30.
+\end{thebibliography}
+
+\end{document}

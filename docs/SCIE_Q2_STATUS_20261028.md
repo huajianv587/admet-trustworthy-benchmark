@@ -10,6 +10,15 @@ decision, or zero total author payment.
 
 ## Completed in this refresh
 
+- Repaired duplicated model-family wording, duplicated result prose, and
+  ambiguous external-diagnostic presentation in the manuscript source.
+- Synchronized the Markdown author-review source with the repaired LaTeX
+  manuscript and corrected the reference numbering in the Word source.
+- Recompiled the main manuscript and supplement: 19 and 3 pages,
+  respectively; no TeX errors or undefined references.
+- Rebuilt the candidate DOCX and refreshed the journal-specific PDF files.
+- Project tests now pass at `224 passed, 6 skipped`.
+
 - Unified the manuscript, cover letter and portal entry sheet title:
   `An Auditable Reliability-Regret Profile for Retrospective ADMET QSAR Model
   Selection: A Fixed-Benchmark Study Across 22 Endpoints`.
@@ -48,3 +57,10 @@ protocol.
 4. Category-level JCR Q2 evidence saved from an accepted institutional record.
 5. Author review of the rendered manuscript, anonymous files, supplement and
    portal preview, followed by the author's submission decision.
+
+## Current refreshed files
+
+- `submission/SAR_QSAR_ADMET_reliability_manuscript_candidate_20261028.docx`
+- `submission/SAR_QSAR_ADMET_reliability_manuscript_candidate_20261028.pdf`
+- `submission/SAR_QSAR_supplementary_20261028.pdf`
+- `submission/SAR_QSAR_submission_candidate_package_refreshed_20261028_v2.zip`
