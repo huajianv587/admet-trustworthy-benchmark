@@ -17,7 +17,7 @@ dependencies = [
 
 [project.optional-dependencies]
 chem = [
-  "rdkit>=2023.9",
+  "rdkit==2026.09.1",
   "pytdc>=0.4.1",
   "deepchem>=2.8.0",
 ]

@@ -170,8 +170,39 @@ def metric_higher_is_better(task_type, metric_name):
     return metric_name == "spearman"
 
 
-def train_single_run(task_name, model_name, seed, output_dir, device_id=0, max_epochs=100, patience=20):
+def completed_for_split_source(
+    metrics_path, split_source, run_mode, batch_size
+):
+    """Treat pre-provenance artifacts as locked_cache, never as pytdc."""
+    try:
+        payload = json.loads(Path(metrics_path).read_text())
+    except (OSError, json.JSONDecodeError):
+        return False
+    recorded = payload.get("split_source", LOCKED_CACHE_SPLIT_SOURCE)
+    return (
+        recorded == split_source
+        and payload.get("run_mode", "formal") == run_mode
+        and payload.get("batch_size", 32) == batch_size
+    )
+
+
+def train_single_run(
+    task_name,
+    model_name,
+    seed,
+    output_dir,
+    device_id=0,
+    max_epochs=100,
+    patience=20,
+    data_dir="data/tdc_official",
+    split_source=LOCKED_CACHE_SPLIT_SOURCE,
+    batch_size=32,
+    profile_only=False,
+):
     """Train a single task-model-seed combination."""
+    if batch_size < 1:
+        raise ValueError("batch_size must be positive")
+    run_mode = 'profile_only' if profile_only else 'formal'
 
     # Setup device
     device = torch.device(f'cuda:{device_id}' if torch.cuda.is_available() else 'cpu')
@@ -184,7 +215,14 @@ def train_single_run(task_name, model_name, seed, output_dir, device_id=0, max_e
     log_path = output_dir / 'logs' / f"{run_id}.log"
 
     # Check if already completed
-    if checkpoint_path.exists() and prediction_path.exists() and metrics_path.exists():
+    if (
+        checkpoint_path.exists()
+        and prediction_path.exists()
+        and metrics_path.exists()
+        and completed_for_split_source(
+            metrics_path, split_source, run_mode, batch_size
+        )
+    ):
         logger.info(f"SKIP {run_id}: already completed")
         return {'status': 'skipped', 'run_id': run_id}
 
@@ -206,8 +244,9 @@ def train_single_run(task_name, model_name, seed, output_dir, device_id=0, max_e
         # PyTDC default split and become incomparable with the retained ledger.
         data = load_tdc_official(
             task_name,
+            data_dir=data_dir,
             seed=seed,
-            split_source="locked_cache",
+            split_source=split_source,
         )
         train_frame, valid_frame, test_frame, task_type, metric_name = split_to_frames(data)
 
@@ -215,8 +254,8 @@ def train_single_run(task_name, model_name, seed, output_dir, device_id=0, max_e
         train_labels = train_frame['Y'].tolist()
         valid_smiles = valid_frame['Drug'].tolist()
         valid_labels = valid_frame['Y'].tolist()
-        test_smiles = test_frame['Drug'].tolist()
-        test_labels = test_frame['Y'].tolist()
+        test_smiles = [] if profile_only else test_frame['Drug'].tolist()
+        test_labels = [] if profile_only else test_frame['Y'].tolist()
 
         logger.info(f"Task: {task_name}, Type: {task_type}, Metric: {metric_name}")
         logger.info(f"Train: {len(train_smiles)}, Valid: {len(valid_smiles)}, Test: {len(test_smiles)}")
@@ -225,16 +264,19 @@ def train_single_run(task_name, model_name, seed, output_dir, device_id=0, max_e
         featurizer = MolecularGraphFeaturizer()
         train_dataset = MolecularGraphDataset(train_smiles, train_labels, featurizer)
         valid_dataset = MolecularGraphDataset(valid_smiles, valid_labels, featurizer)
-        test_dataset = MolecularGraphDataset(test_smiles, test_labels, featurizer)
+        test_dataset = None if profile_only else MolecularGraphDataset(
+            test_smiles, test_labels, featurizer
+        )
 
         # Create dataloaders
-        batch_size = 32
         train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True,
                                  collate_fn=collate_graphs, num_workers=0)
         valid_loader = DataLoader(valid_dataset, batch_size=batch_size, shuffle=False,
                                  collate_fn=collate_graphs, num_workers=0)
-        test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False,
-                                collate_fn=collate_graphs, num_workers=0)
+        test_loader = None if profile_only else DataLoader(
+            test_dataset, batch_size=batch_size, shuffle=False,
+            collate_fn=collate_graphs, num_workers=0,
+        )
 
         # Create model
         if model_name == 'gin':
@@ -247,6 +289,8 @@ def train_single_run(task_name, model_name, seed, output_dir, device_id=0, max_e
             raise ValueError(f"Unknown model: {model_name}")
 
         model = model.to(device)
+        if device.type == 'cuda':
+            torch.cuda.reset_peak_memory_stats(device)
 
         # Loss and optimizer
         if task_type == 'classification':
@@ -305,10 +349,15 @@ def train_single_run(task_name, model_name, seed, output_dir, device_id=0, max_e
 
         # Final evaluation
         valid_preds, valid_labels = evaluate(model, valid_loader, task_type, device)
-        test_preds, test_labels = evaluate(model, test_loader, task_type, device)
+        if profile_only:
+            test_preds = np.array([], dtype=float)
+            test_labels = np.array([], dtype=float)
+            test_metric = None
+        else:
+            test_preds, test_labels = evaluate(model, test_loader, task_type, device)
+            test_metric = compute_metrics(test_preds, test_labels, task_type, metric_name)
 
         valid_metric = compute_metrics(valid_preds, valid_labels, task_type, metric_name)
-        test_metric = compute_metrics(test_preds, test_labels, task_type, metric_name)
 
         # Save predictions
         predictions_df = pd.DataFrame({
@@ -324,21 +373,50 @@ def train_single_run(task_name, model_name, seed, output_dir, device_id=0, max_e
             'task': task_name,
             'model': model_name,
             'seed': seed,
+            'split_source': split_source,
+            'run_mode': run_mode,
+            'batch_size': int(batch_size),
+            'test_evaluated': not profile_only,
+            'split_algorithm': (
+                LOCKED_CACHE_SPLIT_ALGORITHM
+                if split_source == LOCKED_CACHE_SPLIT_SOURCE
+                else 'pytdc_default_task_specific_runtime'
+            ),
             'task_type': task_type,
             'metric_name': metric_name,
             'best_epoch': best_epoch,
             'valid_metric': float(valid_metric),
-            'test_metric': float(test_metric),
-            'train_time_seconds': time.time() - start_time
+            'test_metric': None if test_metric is None else float(test_metric),
+            'train_time_seconds': time.time() - start_time,
+            'cuda_peak_allocated_bytes': (
+                int(torch.cuda.max_memory_allocated(device))
+                if device.type == 'cuda' else None
+            ),
+            'cuda_peak_reserved_bytes': (
+                int(torch.cuda.max_memory_reserved(device))
+                if device.type == 'cuda' else None
+            ),
         }
 
         with open(metrics_path, 'w') as f:
             json.dump(metrics, f, indent=2)
 
-        logger.info(f"COMPLETE {run_id}: valid_{metric_name}={valid_metric:.4f}, test_{metric_name}={test_metric:.4f}")
+        if profile_only:
+            logger.info(
+                f"PROFILE COMPLETE {run_id}: valid_{metric_name}={valid_metric:.4f}"
+            )
+        else:
+            logger.info(
+                f"COMPLETE {run_id}: valid_{metric_name}={valid_metric:.4f}, "
+                f"test_{metric_name}={test_metric:.4f}"
+            )
         logger.removeHandler(file_handler)
 
-        return {'status': 'success', 'run_id': run_id, 'test_metric': float(test_metric)}
+        return {
+            'status': 'success',
+            'run_id': run_id,
+            'test_metric': None if test_metric is None else float(test_metric),
+        }
 
     except Exception as e:
         logger.error(f"FAILED {run_id}: {str(e)}", exc_info=True)
@@ -356,6 +434,15 @@ def main():
                        help='Random seeds')
     parser.add_argument('--output-dir', type=str, default='results/neural',
                        help='Output directory')
+    parser.add_argument('--data-dir', type=str, default='data/tdc_official',
+                       help='TDC cache root')
+    parser.add_argument('--split-source', choices=SPLIT_SOURCE_CHOICES,
+                       default=LOCKED_CACHE_SPLIT_SOURCE,
+                       help='Explicit split protocol; formal runs use locked_cache')
+    parser.add_argument('--batch-size', type=int, default=32,
+                       help='Molecular graph batch size')
+    parser.add_argument('--profile-only', action='store_true',
+                       help='Train and validate without evaluating or exporting test predictions')
     parser.add_argument('--max-parallel', type=int, default=4,
                        help='Maximum parallel runs')
     parser.add_argument('--resume', action='store_true',
@@ -364,6 +451,8 @@ def main():
                        help='Smoke test: 1 regression + 1 classification task, 1 seed, both models')
 
     args = parser.parse_args()
+    if args.batch_size < 1:
+        raise ValueError('--batch-size must be positive')
 
     # Setup output directories
     output_dir = Path(args.output_dir)
@@ -410,7 +499,17 @@ def main():
     results = []
     for i, (task, model, seed) in enumerate(run_queue):
         logger.info(f"Progress: {i+1}/{len(run_queue)}")
-        result = train_single_run(task, model, seed, output_dir, device_id=0)
+        result = train_single_run(
+            task,
+            model,
+            seed,
+            output_dir,
+            device_id=0,
+            data_dir=args.data_dir,
+            split_source=args.split_source,
+            batch_size=args.batch_size,
+            profile_only=args.profile_only,
+        )
         results.append(result)
 
     # Summary

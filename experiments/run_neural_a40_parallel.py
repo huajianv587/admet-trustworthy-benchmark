@@ -87,7 +87,19 @@ def estimate_training_time(task_name, model_name):
     return base_time * model_mult
 
 
-def worker_process(gpu_id, task_queue, result_queue, output_dir, stop_event, deadline_ts, start_margin_seconds):
+def worker_process(
+    gpu_id,
+    task_queue,
+    result_queue,
+    output_dir,
+    stop_event,
+    deadline_ts,
+    start_margin_seconds,
+    data_dir,
+    split_source,
+    batch_size,
+    profile_only,
+):
     """
     Worker process that consumes tasks from queue.
     Each worker gets assigned a GPU device.
@@ -118,7 +130,11 @@ def worker_process(gpu_id, task_queue, result_queue, output_dir, stop_event, dea
                 output_dir,
                 device_id=gpu_id,
                 max_epochs=100,
-                patience=20
+                patience=20,
+                data_dir=data_dir,
+                split_source=split_source,
+                batch_size=batch_size,
+                profile_only=profile_only,
             )
 
             result['gpu_id'] = gpu_id
@@ -134,7 +150,12 @@ def worker_process(gpu_id, task_queue, result_queue, output_dir, stop_event, dea
             })
 
 
-def get_completed_runs(output_dir):
+def get_completed_runs(
+    output_dir,
+    split_source=LOCKED_CACHE_SPLIT_SOURCE,
+    run_mode="formal",
+    batch_size=None,
+):
     """Get set of completed run_ids."""
     completed = set()
     checkpoint_dir = output_dir / 'checkpoints'
@@ -148,7 +169,19 @@ def get_completed_runs(output_dir):
             metric_file = metrics_dir / f"{run_id}.json"
 
             if pred_file.exists() and metric_file.exists():
-                completed.add(run_id)
+                try:
+                    payload = json.loads(metric_file.read_text())
+                except (OSError, json.JSONDecodeError):
+                    continue
+                recorded = payload.get("split_source", LOCKED_CACHE_SPLIT_SOURCE)
+                recorded_mode = payload.get("run_mode", "formal")
+                recorded_batch = payload.get("batch_size")
+                if (
+                    recorded == split_source
+                    and recorded_mode == run_mode
+                    and (batch_size is None or recorded_batch == batch_size)
+                ):
+                    completed.add(run_id)
 
     return completed
 
@@ -163,8 +196,17 @@ def main():
                        help='Random seeds')
     parser.add_argument('--output-dir', type=str, default='results/neural',
                        help='Output directory')
+    parser.add_argument('--data-dir', type=str, default='data/tdc_official',
+                       help='TDC cache root')
+    parser.add_argument('--split-source', choices=SPLIT_SOURCE_CHOICES,
+                       default=LOCKED_CACHE_SPLIT_SOURCE,
+                       help='Explicit split protocol; formal runs use locked_cache')
+    parser.add_argument('--batch-size', type=int, default=32,
+                       help='Molecular graph batch size')
+    parser.add_argument('--profile-only', action='store_true',
+                       help='Train and validate without evaluating or exporting test predictions')
     parser.add_argument('--max-parallel', type=int, default=8,
-                       help='Maximum parallel runs (8-12 recommended for A40)')
+                       help='Maximum concurrent runs on the allocated GPU')
     parser.add_argument('--num-gpus', type=int, default=1,
                        help='Number of GPUs available')
     parser.add_argument('--resume', action='store_true',
@@ -175,6 +217,10 @@ def main():
                        help='Do not start new runs this many minutes before the wave budget ends')
 
     args = parser.parse_args()
+    if not 1 <= args.max_parallel <= 8:
+        raise ValueError('--max-parallel must be between 1 and 8')
+    if args.batch_size < 1:
+        raise ValueError('--batch-size must be positive')
 
     # Setup output directories
     output_dir = Path(args.output_dir)
@@ -198,7 +244,13 @@ def main():
     models = [args.model] if args.model else ['gin', 'dmpnn']
 
     # Get completed runs
-    completed = get_completed_runs(output_dir)
+    run_mode = 'profile_only' if args.profile_only else 'formal'
+    completed = get_completed_runs(
+        output_dir,
+        args.split_source,
+        run_mode=run_mode,
+        batch_size=args.batch_size,
+    )
     logger.info(f"Found {len(completed)} completed runs")
 
     # Build run queue with priority (small tasks first for quick wins)
@@ -222,6 +274,9 @@ def main():
     logger.info(f"Seeds: {seeds}")
     logger.info(f"Max parallel: {args.max_parallel}")
     logger.info(f"Num GPUs: {args.num_gpus}")
+    logger.info(f"Split source: {args.split_source}")
+    logger.info(f"Batch size: {args.batch_size}")
+    logger.info(f"Run mode: {'profile_only' if args.profile_only else 'formal'}")
     logger.info(f"Stop-start margin: {args.stop_start_margin_minutes:.1f} minutes")
 
     if total_runs == 0:
@@ -265,7 +320,19 @@ def main():
         gpu_id = i % args.num_gpus
         p = mp.Process(
             target=worker_process,
-            args=(gpu_id, task_queue, result_queue, output_dir, stop_event, deadline_ts, start_margin_seconds)
+            args=(
+                gpu_id,
+                task_queue,
+                result_queue,
+                output_dir,
+                stop_event,
+                deadline_ts,
+                start_margin_seconds,
+                args.data_dir,
+                args.split_source,
+                args.batch_size,
+                args.profile_only,
+            )
         )
         p.start()
         workers.append(p)
@@ -344,6 +411,8 @@ def main():
         'elapsed_hours': elapsed_total,
         'throughput_per_hour': (n_success + n_skipped) / elapsed_total if elapsed_total > 0 else 0,
         'max_parallel': args.max_parallel,
+        'batch_size': args.batch_size,
+        'run_mode': 'profile_only' if args.profile_only else 'formal',
         'num_gpus': args.num_gpus,
         'results': results
     }

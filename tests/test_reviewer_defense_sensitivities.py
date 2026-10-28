@@ -69,6 +69,8 @@ def test_locked_cross_endpoint_overlap_headlines_are_exact_and_aggregate_only() 
     assert summary["global_unique_union_count"] == EXPECTED_ENDPOINT_UNION == 13818
     assert summary["pairs_with_overlap"] == EXPECTED_OVERLAPPING_PAIRS == 209
     assert summary["maximum_pair_intersection_count"] == 538
+    # RDKit canonical SMILES are version-sensitive.  The project pins the
+    # canonicalization runtime so this aggregate digest remains reproducible.
     assert summary["global_whole_set_sha256"] == (
         "b04546d16ad7a7a644fd1a1f1eb3829287c4b293d9a3b68abf57d811111d97b6"
     )

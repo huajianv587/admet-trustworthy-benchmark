@@ -10,7 +10,7 @@ dependencies:
   - scikit-learn
   - scipy
   - pyyaml
-  - rdkit
+  - rdkit=2026.09.1
   - pytorch
   - "setuptools<81"
   - pip:

@@ -1997,14 +1997,17 @@ def _validate_cleaned_sensitivity(
         raise ValueError("cleaned_manifest config_sha256 is stale")
     if not _SHA256_TEXT.fullmatch(execution_config_sha256):
         raise ValueError("cleaned_manifest execution_config_sha256 is invalid")
+    current_config_sha256 = str(source_records["cleaned_config"]["sha256"]).lower()
+    manifest_config_sha256 = _norm(manifest.get("config_sha256"))
     if not isinstance(corrections, list):
-        raise ValueError("cleaned_manifest config_metadata_corrections must be a list")
+        raise ValueError("cleaned_manifest config metadata corrections must be a list")
     if len(corrections) == 0:
-        # A current config may already carry the correct audit metadata. In
-        # that case the execution hash is the same as the released config and
-        # no retrospective correction receipt is required.
-        if execution_config_sha256 != source_records["cleaned_config"]["sha256"]:
-            raise ValueError("cleaned_manifest execution config hash is stale")
+        if execution_config_sha256.lower() != manifest_config_sha256 or (
+            execution_config_sha256.lower() != current_config_sha256
+        ):
+            raise ValueError(
+                "cleaned_manifest without metadata correction must bind execution and current config hashes"
+            )
     elif len(corrections) == 1:
         correction = corrections[0]
         if not isinstance(correction, dict) or not (
@@ -2013,14 +2016,13 @@ def _validate_cleaned_sensitivity(
             and correction.get("new_value") is False
             and correction.get("computational_effect") is False
             and correction.get("execution_config_sha256") == execution_config_sha256
-            and correction.get("corrected_config_sha256")
-            == source_records["cleaned_config"]["sha256"]
+            and correction.get("corrected_config_sha256") == current_config_sha256
             and isinstance(correction.get("reason"), str)
             and bool(str(correction.get("reason")).strip())
         ):
             raise ValueError("cleaned_manifest config metadata correction is invalid")
     else:
-        raise ValueError("cleaned_manifest must contain at most one config metadata correction")
+        raise ValueError("cleaned_manifest has multiple config metadata corrections")
     if (
         manifest_gate.get("execution_config_sha256") != execution_config_sha256
         or manifest_gate.get("config_metadata_corrections") != corrections
@@ -2072,6 +2074,7 @@ def _validate_cleaned_sensitivity(
     expected_config_logical_path = FINAL_SOURCE_PATHS["cleaned_config"].removeprefix(
         "@project/"
     )
+    data_logical_path = str(manifest_gate.get("data_logical_path", ""))
     if (
         str(input_artifacts["config"].get("logical_path", ""))
         != expected_config_logical_path
@@ -2079,10 +2082,36 @@ def _validate_cleaned_sensitivity(
         != expected_config_logical_path
         or str(manifest.get("config_logical_path", ""))
         != expected_config_logical_path
-            or str(manifest_gate.get("data_logical_path", ""))
-            not in {"data/tdc_official", "tdc_official"}
+        or data_logical_path not in {"data/tdc_official", "tdc_official"}
     ):
         raise ValueError("cleaned_gate logical config/data paths are not the locked project paths")
+    if production_contract:
+        input_hashes = manifest.get("input_sha256")
+        if not isinstance(input_hashes, dict) or {
+            _norm(task) for task in input_hashes
+        } != tasks:
+            raise ValueError("cleaned_manifest input hash task set is incomplete")
+        task_keys = {_norm(task): str(task) for task in input_hashes}
+        data_root = ROOT / "data" / "tdc_official" / "admet_group"
+        for task in tasks:
+            task_hashes = input_hashes[task_keys[task]]
+            if not isinstance(task_hashes, dict) or set(task_hashes) != {
+                "test.csv",
+                "train_val.csv",
+            }:
+                raise ValueError(
+                    f"cleaned_manifest input hashes are incomplete for {task}"
+                )
+            for filename, expected_hash in task_hashes.items():
+                source_path = data_root / task_keys[task].lower() / filename
+                if (
+                    not source_path.is_file()
+                    or not _SHA256_TEXT.fullmatch(str(expected_hash).lower())
+                    or _sha256_path(source_path) != str(expected_hash).lower()
+                ):
+                    raise ValueError(
+                        f"cleaned_manifest source hash mismatch for {task}/{filename}"
+                    )
     for nonportable_field in (
         "verified_config_path",
         "verified_config_path_nonportable",

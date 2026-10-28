@@ -9,6 +9,10 @@ venv/
 data/tdc_official/
 data/moleculenet/
 data/audit/*.csv
+data/external_sealed_20261020/
+data/external_prepared_20261020/
+data/external_sealed_20261021/
+data/external_prepared_20261021/
 results/**/*.csv
 results/**/*.json
 results/**/*.png
